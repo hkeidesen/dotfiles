@@ -113,6 +113,43 @@ M.ESLINT.filetypes = {
   'postcss',
 }
 
+-- HTMX
+M.HTMX = {}
+M.HTMX.filetypes = { 'html', 'htmx' }
+M.HTMX.servers = { 'html' }
+
+-- GO
+M.GO = {}
+M.GO.servers = { 'gopls' }
+M.GO.filetypes = { 'go', 'gomod' }
+M.GO.settings = {
+  gopls = {
+    analyses = {
+      unusedparams = true,
+    },
+    staticcheck = true,
+  },
+}
+
+-- RUST
+M.RUST = {}
+M.RUST.servers = { 'rust_analyzer' }
+M.RUST.filetypes = { 'rust' }
+M.RUST.settings = {
+  ['rust-analyzer'] = {
+    assist = {
+      importGranularity = 'module',
+      importPrefix = 'by_self',
+    },
+    cargo = {
+      loadOutDirsFromCheck = true,
+    },
+    procMacro = {
+      enable = true,
+    },
+  },
+}
+
 function M.get_clients(opts)
   local ret = {} ---@type vim.lsp.Client[]
   if vim.lsp.get_clients then
@@ -320,9 +357,9 @@ M.get_servers = function()
       'clangd',
       '--offset-encoding=utf-16',
     } },
-    -- gopls = {},
-    -- pyright = {},
-    rust_analyzer = {},
+    gopls = M.GO,
+    pyright = {},
+    rust_analyzer = M.RUST,
     vtsls = {
       handlers = M.TYPESCRIPT.handlers,
       enabled = M.TYPESCRIPT.server_to_use == 'vtsls',
@@ -372,7 +409,7 @@ M.get_servers = function()
         client.server_capabilities.documentFormattingProvider = nil
       end,
     },
-    html = { filetypes = { 'html', 'twig', 'hbs', 'blade' } },
+    html = { filetypes = { 'html', 'twig', 'hbs', 'blade', 'htmx' } },
     eslint = {
       filetypes = M.ESLINT.filetypes,
       settings = {
@@ -549,4 +586,5 @@ function M.words.jump(count)
     vim.api.nvim_win_set_cursor(0, target.from)
   end
 end
+
 return M
