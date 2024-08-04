@@ -10,37 +10,37 @@ return {
       local cspell = require('cspell')
       local util = require('ergou.util')
 
-      -- local cspellConfig = {
-      --   find_json = function()
-      --     for _, file in ipairs(util.lsp.cspell_config_files) do
-      --       local dotfiles_path = os.getenv('DOTFILES')
-      --       if dotfiles_path then
-      --         local path = util.root.find_file(file, dotfiles_path .. '/cspell')
-      --         if path then
-      --           return path
-      --         end
-      --       end
-      --     end
-      --     return nil
-      --   end,
-      -- }
+      local cspellConfig = {
+        find_json = function()
+          for _, file in ipairs(util.lsp.cspell_config_files) do
+            local dotfiles_path = os.getenv('DOTFILES')
+            if dotfiles_path then
+              local path = util.root.find_file(file, dotfiles_path .. '/cspell')
+              if path then
+                return path
+              end
+            end
+          end
+          return nil
+        end,
+      }
 
-      -- null_ls.setup({
-      --   sources = {
-      --     cspell.diagnostics.with({
-      --       config = cspellConfig,
-      --       diagnostics_postprocess = function(diagnostic)
-      --         diagnostic.severity = vim.diagnostic.severity['HINT']
-      --       end,
-      --     }),
-      --     cspell.code_actions.with({ config = cspellConfig }),
-      --     null_ls.builtins.diagnostics.phpcs.with({
-      --       extra_args = { '--standard=vendor/php-cs/ruleset.xml' },
-      --     }),
-      --     null_ls.builtins.diagnostics.zsh,
-      --     null_ls.builtins.code_actions.ts_node_action,
-      --   },
-      -- })
+      null_ls.setup({
+        sources = {
+          cspell.diagnostics.with({
+            config = cspellConfig,
+            diagnostics_postprocess = function(diagnostic)
+              diagnostic.severity = vim.diagnostic.severity['HINT']
+            end,
+          }),
+          cspell.code_actions.with({ config = cspellConfig }),
+          null_ls.builtins.diagnostics.phpcs.with({
+            extra_args = { '--standard=vendor/php-cs/ruleset.xml' },
+          }),
+          null_ls.builtins.diagnostics.zsh,
+          null_ls.builtins.code_actions.ts_node_action,
+        },
+      })
     end,
   },
 }

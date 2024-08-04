@@ -1,7 +1,7 @@
 return {
   {
     'ThePrimeagen/harpoon',
-    enabled = true,
+    enabled = false,
     branch = 'harpoon2',
     event = 'LazyFile',
     opts = {
@@ -22,7 +22,7 @@ return {
           desc = 'Harpoon File',
         },
         {
-          '<C-h>',
+          '<C-e>',
           function()
             local harpoon = require('harpoon')
             harpoon.ui:toggle_quick_menu(harpoon:list())

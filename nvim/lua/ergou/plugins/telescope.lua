@@ -10,7 +10,7 @@ return {
       -- find
       {
         '<leader>,',
-        '<cmd>Telescope buffers sort_mru=true sort_lastused=true<cr>',
+        '<cmd>Telescope buffers sort_mru=true<cr>',
         desc = 'Switch Buffer',
       },
       { '<leader>ff', Util.telescope('files'), desc = 'Find Files (root dir)' },
@@ -19,7 +19,7 @@ return {
       { '<leader>:', '<cmd>Telescope command_history<cr>', desc = 'Command History' },
       {
         '<leader><space>',
-        '<cmd>Telescope buffers sort_mru=true sort_lastused=true<cr>',
+        '<cmd>Telescope buffers sort_mru=true<cr>',
         desc = 'Find Files (root dir)',
       },
       { '<leader>fc', Util.telescope.config_files(), desc = 'Find Config File' },
@@ -112,16 +112,12 @@ return {
           path_display = { 'truncate' },
           mappings = {
             i = {
-              ['<C-u>'] = false,
-              ['<C-d>'] = false,
               ['<c-t>'] = open_with_trouble,
               ['<a-t>'] = open_selected_with_trouble,
               ['<a-i>'] = find_files_no_ignore,
               ['<a-h>'] = find_files_with_hidden,
               ['<C-Down>'] = actions.cycle_history_next,
               ['<C-Up>'] = actions.cycle_history_prev,
-              ['<C-f>'] = actions.preview_scrolling_down,
-              ['<C-b>'] = actions.preview_scrolling_up,
               ['<C-j>'] = actions.move_selection_next,
               ['<C-k>'] = actions.move_selection_previous,
             },

@@ -1,5 +1,6 @@
-local bufferline_util = require('ergou.util.bufferline')
+local bufferline_util = require('ergou.util.buffer')
 return {
+  enabled = false,
   'akinsho/bufferline.nvim',
   event = 'VeryLazy',
   keys = {
@@ -12,28 +13,36 @@ return {
     { '<S-l>', '<cmd>BufferLineCycleNext<cr>', desc = 'Next buffer' },
   },
   ---@class bufferline.UserConfig
-  opts = {
-    options = {
-      close_command = function(n)
-        ergou.bufferline.bufremove(n)
-      end,
-      right_mouse_command = function(n)
-        ergou.bufferline.bufremove(n)
-      end,
-      diagnostics = 'nvim_lsp',
-      diagnostics_indicator = bufferline_util.diagnostics_symbol,
-      separator_style = 'slant',
-      always_show_bufferline = false,
-      offsets = {
-        {
-          filetype = 'neo-tree',
-          text = 'Neo-tree',
-          highlight = 'Directory',
-          text_align = 'left',
+  opts = function()
+    local macchiato = require('catppuccin.palettes').get_palette('macchiato')
+    return {
+      options = {
+        close_command = function(n)
+          ergou.buffer.bufremove(n)
+        end,
+        right_mouse_command = function(n)
+          ergou.buffer.bufremove(n)
+        end,
+        diagnostics = 'nvim_lsp',
+        diagnostics_indicator = bufferline_util.diagnostics_symbol,
+        separator_style = 'thin',
+        always_show_bufferline = false,
+        offsets = {
+          {
+            filetype = 'neo-tree',
+            text = 'Neo-tree',
+            highlight = 'Directory',
+            text_align = 'left',
+          },
         },
       },
-    },
-  },
+      highlights = {
+        separator = { fg = macchiato.crust },
+        separator_visible = { fg = macchiato.crust },
+        separator_selected = { fg = macchiato.crust },
+      },
+    }
+  end,
   config = function(_, opts)
     require('bufferline').setup(opts)
     -- Fix bufferline when restoring a session

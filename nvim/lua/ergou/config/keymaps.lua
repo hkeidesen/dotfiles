@@ -80,6 +80,7 @@ map('n', '<leader>cd', vim.diagnostic.open_float, { desc = 'Line Diagnostics' })
 
 -- highlights under cursor
 map('n', '<leader>ui', vim.show_pos, { desc = 'Inspect Pos' })
+map('n', '<leader>uI', '<cmd>InspectTree<cr>', { desc = 'Inspect Tree' })
 
 -- windows
 map('n', '<leader>ww', '<C-W>p', { desc = 'Other window', remap = true })
@@ -94,10 +95,11 @@ map('n', '<leader>-', '<C-W>s', { desc = 'Split window below', remap = true })
 map('n', '<leader>|', '<C-W>v', { desc = 'Split window right', remap = true })
 
 --buffer
-map('n', '<leader>bd', require('ergou.util').bufferline.bufremove, { desc = 'Delete Buffer' })
+map('n', '<leader>bd', require('ergou.util').buffer.bufremove, { desc = 'Delete Buffer' })
 map('n', '<leader>bD', '<cmd>:bd<cr>', { desc = 'Delete Buffer and Window' })
 -- tabs
 map('n', '<leader><tab>l', '<cmd>tablast<cr>', { desc = 'Last Tab' })
+map('n', '<leader><tab>o', '<cmd>tabonly<cr>', { desc = 'Close Other Tabs' })
 map('n', '<leader><tab>f', '<cmd>tabfirst<cr>', { desc = 'First Tab' })
 map('n', '<leader><tab>n', '<cmd>tabnew<cr>', { desc = 'New Tab' })
 map('n', '<leader><tab>]', '<cmd>tabnext<cr>', { desc = 'Next Tab' })
@@ -129,4 +131,3 @@ map('n', '<leader>tw', function()
     vim.wo.wrap = true
   end
 end, { desc = 'Toggle Wrap' })
-

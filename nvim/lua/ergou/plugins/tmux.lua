@@ -17,7 +17,7 @@ return {
     keys = {
       { '<C-j>', mode = { 'n', 'i' }, '<cmd>lua require("tmux").move_bottom()<cr>' },
       { '<C-l>', mode = { 'n', 'i' }, '<cmd>lua require("tmux").move_right()<cr>' },
-      -- { '<C-h>', mode = { 'n', 'i' }, '<cmd>lua require("tmux").move_left()<cr>' },
+      { '<C-h>', mode = { 'n', 'i' }, '<cmd>lua require("tmux").move_left()<cr>' },
       { '<C-k>', mode = { 'n', 'i' }, '<cmd>lua require("tmux").move_top()<cr>' },
       { '<C-down>', mode = { 'n', 'i' }, '<cmd>lua require("tmux").resize_bottom()<cr>' },
       { '<C-up>', mode = { 'n', 'i' }, '<cmd>lua require("tmux").resize_top()<cr>' },

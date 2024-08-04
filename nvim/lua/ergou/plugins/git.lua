@@ -23,9 +23,9 @@ return {
         changedelete = { text = '▎' },
         untracked = { text = '▎' },
       },
-      -- Higher than lsp diagnostics so I will see git changes first
-      -- I am okay for this to be top priority as the error will show in buffer anyway
-      sign_priority = 1000,
+      -- numhl enabled so can make diagnostic has high priority as will see both anyway
+      -- sign_priority = 1000,
+      numhl = true,
       signs_staged = {
         add = { text = '▎' },
         change = { text = '▎' },
@@ -59,7 +59,7 @@ return {
         map('n', '<leader>ghp', gitsigns.preview_hunk_inline, 'preview git hunk')
         map('n', '<leader>ghP', gitsigns.preview_hunk, 'preview git hunk')
         map('n', '<leader>ghb', function()
-          gitsigns.blame_line({ full = false })
+          gitsigns.blame_line({ full = true })
         end, 'git blame line')
         map('n', '<leader>ghd', gitsigns.diffthis, 'git diff against index')
         map('n', '<leader>ghD', function()
@@ -68,7 +68,10 @@ return {
 
         -- Toggles
         map('n', '<leader>gB', gitsigns.toggle_current_line_blame, 'toggle git blame line')
-        map('n', '<leader>gd', gitsigns.toggle_deleted, 'toggle git show deleted')
+        map('n', '<leader>gd', function()
+          gitsigns.toggle_deleted()
+          gitsigns.toggle_linehl()
+        end, 'toggle git show deleted')
         map('n', '<leader>gb', git_util.blame_line, 'Git Blame Line')
 
         -- Jump to next/prev hunk
@@ -134,7 +137,7 @@ return {
     opts = {
       statusline = {
         blame = {
-          icon = ' ',
+          icon = ' ',
         },
         branchState = {
           icons = {
@@ -143,6 +146,9 @@ return {
             diverge = '󱚠 ',
           },
         },
+      },
+      backdrop = {
+        enabled = false,
       },
     },
     keys = {

@@ -1,27 +1,56 @@
 return {
   'MagicDuck/grug-far.nvim',
-  config = function(_, opts)
-    require('grug-far').setup(opts)
-  end,
+  cmd = 'GrugFar',
+  opts = { headerMaxWidth = 80 },
   keys = {
     {
       '<leader>rr',
       function()
-        require('grug-far').grug_far({})
+        require('grug-far').grug_far({
+          transient = true,
+        })
       end,
-      desc = 'replace current cursor word',
+      mode = { 'n', 'v' },
+      desc = 'Search and Replace',
     },
     {
-      '<leader>rw',
+      '<leader>rR',
       function()
-        require('grug-far').grug_far({ prefills = { search = vim.fn.expand('<cword>') } })
+        local grug = require('grug-far')
+        local ext = vim.bo.buftype == '' and vim.fn.expand('%:e')
+        grug.grug_far({
+          transient = true,
+          prefills = {
+            filesFilter = ext and ext ~= '' and '*.' .. ext or nil,
+          },
+        })
       end,
-      desc = 'replace current cursor word',
+      mode = { 'n', 'v' },
+      desc = 'Search and Replace with current file type',
     },
     {
       '<leader>rf',
       function()
-        require('grug-far').grug_far({ prefills = { flags = vim.fn.expand('%') } })
+        require('grug-far').grug_far({
+          transient = true,
+          prefills = {
+            flags = vim.fn.expand('%'),
+          },
+        })
+      end,
+      desc = 'replace with current file flag',
+    },
+    {
+      '<leader>rF',
+      function()
+        local ext = vim.bo.buftype == '' and vim.fn.expand('%:e')
+        require('grug-far').grug_far({
+          transient = true,
+          prefills = {
+            flags = vim.fn.expand('%'),
+            filesFilter = ext and ext ~= '' and '*.' .. ext or nil,
+          },
+        })
       end,
       desc = 'replace with current file flag',
     },

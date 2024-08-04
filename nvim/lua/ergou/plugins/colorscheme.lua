@@ -8,6 +8,7 @@ return {
     config = function()
       require('catppuccin').setup({
         no_italic = true,
+        transparent_background = true,
         integrations = {
           aerial = true,
           diffview = true,
@@ -15,6 +16,7 @@ return {
           mason = true,
           noice = true,
           notify = true,
+          grug_far = true,
           navic = {
             enabled = true,
           },
@@ -38,7 +40,7 @@ return {
         end,
       })
 
-      vim.cmd.colorscheme('catppuccin-frappe')
+      vim.cmd.colorscheme('catppuccin-macchiato')
     end,
   },
   {

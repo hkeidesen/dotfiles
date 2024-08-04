@@ -59,14 +59,6 @@ return {
         opts = { attach_navic = false },
       },
       { 'b0o/schemastore.nvim' },
-      -- {
-      --   'github/copilot.vim',
-      --   config = function()
-      --     vim.g.copilot_filetypes = {
-      --       ["*"] = true
-      --     }
-      --   end,
-      -- },
     },
     ---@class PluginLspOpts
     opts = {
@@ -103,7 +95,7 @@ return {
           text = {
             [vim.diagnostic.severity.ERROR] = signs.Error,
             [vim.diagnostic.severity.WARN] = signs.Warn,
-            [vim.diagnostic.severity.HINT] = '',
+            [vim.diagnostic.severity.HINT] = signs.Hint,
             [vim.diagnostic.severity.INFO] = signs.Info,
           },
         },
