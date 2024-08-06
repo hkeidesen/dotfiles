@@ -5,6 +5,7 @@ return {
     cmd = 'Telescope',
     dependencies = {
       { 'nvim-telescope/telescope-fzf-native.nvim', build = 'make' },
+      "nvim-telescope/telescope-live-grep-args.nvim",
     },
     keys = {
       -- find
@@ -87,6 +88,7 @@ return {
     config = function()
       local telescope = require('telescope')
       local actions = require('telescope.actions')
+      local lga_actions = require("telescope-live-grep-args.actions")
       local build_in = require('telescope.builtin')
       local open_with_trouble = function(...)
         return require('trouble.providers.telescope').open_with_trouble(...)
@@ -126,9 +128,30 @@ return {
             },
           },
         },
+        extensions = {
+          live_grep_args = {
+            auto_quoting = true, -- enable/disable auto-quoting
+            -- define mappings, e.g.
+            mappings = { -- extend mappings
+              i = {
+                ["<C-k>"] = lga_actions.quote_prompt(),
+                ["<C-i>"] = lga_actions.quote_prompt({ postfix = " --iglob " }),
+                -- freeze the current list and start a fuzzy search in the frozen list
+                ["<C-space>"] = actions.to_fuzzy_refine,
+              },
+            },
+            -- ... also accepts theme settings, for example:
+            -- theme = "dropdown", -- use dropdown theme
+            -- theme = { }, -- use own theme spec
+            -- layout_config = { mirror=true }, -- mirror preview pane
+          }
+        }
+      
       })
 
       telescope.load_extension('fzf')
+      telescope.load_extension("live_grep_args")
+
 
       -- Telescope live_grep in git root
       -- Function to find the git root directory based on the current buffer's path
@@ -166,7 +189,7 @@ return {
       end
       vim.api.nvim_create_user_command('LiveGrepGitRoot', live_grep_git_root, {})
 
-      vim.keymap.set('n', '<leader>fg', telescope.extensions.live_grep_args.live_grep_args, { desc = 'Live grep args' })
+      -- vim.keymap.set('n', '<leader>fg', telescope.extensions.live_grep_args.live_grep_args, { desc = 'Live grep args' })
     end,
   },
   {
@@ -184,6 +207,7 @@ return {
     config = function()
       Util.on_load('telescope.nvim', function()
         require('telescope').load_extension('live_grep_args')
+        vim.keymap.set('n', '<leader>fg',  ":lua require('telescope').extensions.live_grep_args.live_grep_args()<CR>")
       end)
     end,
   },
