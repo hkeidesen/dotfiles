@@ -1,3 +1,4 @@
+
 return {
   'rmagatti/alternate-toggler',
   opts = {
@@ -6,6 +7,13 @@ return {
     },
   },
   keys = {
-    { '<leader>ta', ':ToggleAlternate<CR>', mode = { 'n' }, desc = 'Toggle alternate' },
+    {
+      '<leader>ta',
+      function()
+        require('alternate-toggler').toggleAlternate()
+      end,
+      mode = { 'n' },
+      desc = 'Toggle alternate',
+    },
   },
 }

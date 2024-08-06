@@ -77,6 +77,9 @@ map('n', '<leader>xq', '<cmd>copen<cr>', { desc = 'Quickfix List' })
 map('n', '<leader>qq', '<cmd>qa<cr>', { desc = 'Quit all' })
 
 map('n', '<leader>cd', vim.diagnostic.open_float, { desc = 'Line Diagnostics' })
+map('n', '<leader>cD', function() vim.diagnostic.setqflist() end, { noremap = true, silent = true, desc = 'File Diagnostics' })
+-- vim.api.nvim_set_keymap('n', '<leader>cD', '<cmd>lua vim.diagnostic.setqflist()<CR>', { noremap = true, silent = true, desc = 'File Diagnostics' })
+
 
 -- highlights under cursor
 map('n', '<leader>ui', vim.show_pos, { desc = 'Inspect Pos' })

@@ -1,7 +1,7 @@
-local timeout = 1500
+local timeout = 2500
 ---@type conform.FiletypeFormatter
--- local eslintFormat = { 'eslint_d' }
-local eslintFormat = { 'prettierd' }
+local eslintFormat = { 'eslint_d' }
+-- local eslintFormat = { 'prettierd' }
 -- local eslintFormat = { lsp_format = 'prefer' }
 return {
   {
