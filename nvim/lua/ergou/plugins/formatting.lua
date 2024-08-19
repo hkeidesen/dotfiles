@@ -19,7 +19,7 @@ return {
         },
         formatters_by_ft = {
           vue = eslintFormat,
-          javascript = eslintFormat,
+          javascript = { 'prettierd' },
           typescript = eslintFormat,
           javascriptreact = eslintFormat,
           typescriptreact = eslintFormat,
@@ -81,3 +81,4 @@ return {
     end,
   },
 }
+

@@ -90,11 +90,11 @@ source $ZSH/oh-my-zsh.sh
 # export LANG=en_US.UTF-8
 
 # Preferred editor for local and remote sessions
-# if [[ -n $SSH_CONNECTION ]]; then
-#   export EDITOR='vim'
-# else
-#   export EDITOR='mvim'
-# fi
+ if [[ -n $SSH_CONNECTION ]]; then
+   export EDITOR='nvim'
+ else
+   export EDITOR='mvim'
+ fi
 
 # Compilation flags
 # export ARCHFLAGS="-arch x86_64"
@@ -113,7 +113,7 @@ source $ZSH/oh-my-zsh.sh
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-alias ls='colorls --sd --gs'
+# alias ls='colorls --sd --gs'
 alias mv4='z /Users/hk/Projects/mlink-vue3-frontend'
 alias backend='z /Users/hk/Projects/mlink-monorepo/backend/mlink'
 
@@ -122,6 +122,20 @@ if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
   tmux attach-session -t default || tmux new-session -s default
 fi
 
+# avoid duplicates..
+export HISTCONTROL=ignoredups:erasedups
+
+# append history entries..
+# setopt -s histappend
+
+# After each command, save and reload history
+export PROMPT_COMMAND="history -a; history -c; history -r; $PROMPT_COMMAND"
+setopt inc_append_history  # Write to history immediately
+# setopt share_history       # Share history across sessions
+# setopt hist_ignore_dups    # Ignore duplicated commands in history
+# setopt hist_ignore_space   # Ignore commands that start with space
+# setopt hist_reduce_blanks  # Remove superfluous blanks before storing in history
+# setopt hist_verify         # Don't execute immediately upon history expansion
 
 # Set paths
 export PATH=/opt/homebrew/bin:$PATH
@@ -141,7 +155,8 @@ code() {
 
 alias inv='nvim $(fzf -m --preview="bat --color=always {}")'
 
-editor="nvim"
+export EDITOR='nvim'
+export VISUAL='nvim'
 
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"

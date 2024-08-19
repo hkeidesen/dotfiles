@@ -1,3 +1,6 @@
+-- -- harpoon
+-- local harpoon_mark = require('ergou.plugins.harpoon').mark -- Adjust the path if necessary
+-- local telescope = require('ergou.utils.telescope') 
 -- key mapping
 local map = vim.keymap.set
 
@@ -15,8 +18,8 @@ map('n', 'vae', 'ggVG', { noremap = true, silent = true, desc = 'Select entire f
 map('n', '<C-n>', '<cmd>nohl<CR>', { noremap = true, silent = true })
 
 -- Change without yanking
-map({ 'n', 'x' }, 'c', '"_c', { noremap = true, silent = true })
-map({ 'n', 'x' }, 'C', '"_C', { noremap = true, silent = true })
+-- map({ 'n', 'x' }, 'c', '"_c', { noremap = true, silent = true })
+-- map({ 'n', 'x' }, 'C', '"_C', { noremap = true, silent = true })
 
 -- Find next alias
 map('n', '<leader>1', '*', { noremap = true, silent = true })
@@ -35,10 +38,10 @@ map('i', '<C-n>', '<esc><cmd>nohl<CR>', { noremap = true, silent = true })
 map({ 'i', 'x', 'n', 's' }, '<C-s>', '<cmd>w<cr><esc>', { desc = 'Save file' })
 
 -- better up/down
-map({ 'n', 'x' }, 'j', 'v:count == 0 ? \'gj\' : \'j\'', { expr = true, silent = true })
-map({ 'n', 'x' }, '<Down>', 'v:count == 0 ? \'gj\' : \'j\'', { expr = true, silent = true })
-map({ 'n', 'x' }, 'k', 'v:count == 0 ? \'gk\' : \'k\'', { expr = true, silent = true })
-map({ 'n', 'x' }, '<Up>', 'v:count == 0 ? \'gk\' : \'k\'', { expr = true, silent = true })
+-- map({ 'n', 'x' }, 'j', 'v:count == 0 ? \'gj\' : \'j\'', { expr = true, silent = true })
+-- map({ 'n', 'x' }, '<Down>', 'v:count == 0 ? \'gj\' : \'j\'', { expr = true, silent = true })
+-- map({ 'n', 'x' }, 'k', 'v:count == 0 ? \'gk\' : \'k\'', { expr = true, silent = true })
+-- map({ 'n', 'x' }, '<Up>', 'v:count == 0 ? \'gk\' : \'k\'', { expr = true, silent = true })
 
 -- buffers
 map('n', '<S-h>', '<cmd>bprevious<cr>', { desc = 'Prev buffer' })
@@ -134,3 +137,26 @@ map('n', '<leader>tw', function()
     vim.wo.wrap = true
   end
 end, { desc = 'Toggle Wrap' })
+
+
+-- local conf = require("telescope.config").values
+-- local function toggle_telescope(harpoon_files)
+--     local file_paths = {}
+--     for _, item in ipairs(harpoon_files) do
+--         table.insert(file_paths, item.filename) -- Assuming `filename` is the correct field
+--     end
+
+--     require("telescope.pickers").new({}, {
+--         prompt_title = "Harpoon",
+--         finder = require("telescope.finders").new_table({
+--             results = file_paths,
+--         }),
+--         previewer = conf.file_previewer({}),
+--         sorter = conf.generic_sorter({}),
+--     }):find()
+-- end
+
+-- -- Toggle Harpoon Telescope Picker
+-- map('n', '<C-e>', function()
+--   toggle_telescope(harpoon_mark.get_all()) -- Fetches the marked files using Harpoon's API
+-- end, { desc = 'Open Harpoon Telescope Picker' })
