@@ -804,6 +804,9 @@ require('lazy').setup({
       require('mason-lspconfig').setup {
         handlers = {
           function(server_name)
+            if server_name == "tsserver" then
+              server_name = "ts_ls"
+            end
             local server = servers[server_name] or {}
             -- This handles overriding only values explicitly passed
             -- by the server configuration above. Useful when disabling
@@ -811,8 +814,8 @@ require('lazy').setup({
             server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
             
             -- Custom configuration for tsserver (TypeScript/JavaScript)
-            if server_name == 'tsserver' then
-              lspconfig.tsserver.setup {
+            if server_name == 'ts_ls' then
+              lspconfig.ts_ls.setup {
                 init_options = {
                   plugins = {
                     {
@@ -826,14 +829,11 @@ require('lazy').setup({
               }
               return
             end
-
             -- Custom configuration for Volar (Vue Language Server)
             if server_name == 'volar' then
               lspconfig.volar.setup {}
               return
             end
-
-
             require('lspconfig')[server_name].setup(server)
           end,
         },
