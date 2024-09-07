@@ -1,6 +1,12 @@
 return {
   {
     'hrsh7th/nvim-cmp',
+    opts = {
+      performance = {
+        debounce = 0,
+        throttle = 0,
+      },
+    },
     event = { 'InsertEnter', 'CmdlineEnter' },
     dependencies = {
       'hrsh7th/cmp-buffer', -- source for text in buffer
@@ -39,7 +45,7 @@ return {
 
       -- loads vscode style snippets from installed plugins (e.g. friendly-snippets)
       require('luasnip.loaders.from_vscode').lazy_load()
-      require('ergou.util.snips').setup_snipes()
+      -- require('ergou.util.snips').setup_snipes() - yolo
 
       cmp.setup({
         snippet = { -- configure how nvim-cmp interacts with snippet engine

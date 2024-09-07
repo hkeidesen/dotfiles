@@ -9,10 +9,6 @@ M.cspell_config_files = {
   '.cSpell.json',
   '.cspell.config.json',
 }
--- PHP
-M.PHP = {}
-M.PHP.working_large_file = false
-
 -- TYPESCRIPT
 M.TYPESCRIPT = {}
 M.TYPESCRIPT.inlay_hints = {
@@ -34,7 +30,7 @@ M.TYPESCRIPT.filetypes = {
   'vue',
 }
 M.TYPESCRIPT.servers = { 'vtsls', 'tsserver' }
-M.TYPESCRIPT.server_to_use = 'vtsls'
+M.TYPESCRIPT.server_to_use = 'tsserver'
 M.TYPESCRIPT.vtsls_typescript_javascript_config = {
   updateImportsOnFileMove = { enabled = 'always' },
   suggest = {
@@ -55,7 +51,7 @@ M.TYPESCRIPT.handlers = {
       return
     end
 
-    -- ignore some tsserver diagnostics
+    -- ignore some ts_ls diagnostics
     local idx = 1
     while idx <= #result.diagnostics do
       local entry = result.diagnostics[idx]
@@ -148,6 +144,73 @@ M.RUST.settings = {
       enable = true,
     },
   },
+}
+
+-- PYTHON
+M.PYTHON = {}
+M.PYTHON.servers = { 'pyright', 'ruff' }
+M.PYTHON.config = {
+  -- Pyright configuration
+  pyright = {
+    settings = {
+      pyright = {
+        disableOrganizeImports = true,  -- Use Ruff for import organizing
+      },
+      python = {
+        analysis = {
+          ignore = { '*' },  -- Ignore all files for Pyright to use Ruff for linting
+        },
+      },
+    },
+  },
+  -- Ruff configuration
+  ruff = {
+    init_options = {
+      settings = {
+        logLevel = 'debug',  -- Enable detailed logging for Ruff
+      },
+    },
+    on_attach = function(client, bufnr)
+      client.server_capabilities.hoverProvider = false  -- Disable hover in favor of Pyright
+
+      -- Enable format on save
+      if client.server_capabilities.documentFormattingProvider then
+        vim.api.nvim_create_autocmd("BufWritePre", {
+          buffer = bufnr,
+          callback = function()
+            vim.lsp.buf.format({ timeout_ms = 2000 })
+          end,
+        })
+      end
+
+      -- Organize imports on save
+      vim.api.nvim_create_autocmd("BufWritePre", {
+        buffer = bufnr,
+        callback = function()
+          vim.lsp.buf.code_action({
+            context = { only = { "source.organizeImports" } },
+            apply = true,
+          })
+        end,
+      })
+
+      -- Fix all issues on save
+      vim.api.nvim_create_autocmd("BufWritePre", {
+        buffer = bufnr,
+        callback = function()
+          vim.lsp.buf.code_action({
+            context = { only = { "source.fixAll" } },
+            apply = true,
+          })
+        end,
+      })
+    end,
+  },
+}
+
+-- disable pylsp autostart
+require('lspconfig').pylsp.setup {
+  autostart = false,  -- Prevents pylsp from automatically starting
 }
 
 function M.get_clients(opts)
@@ -358,7 +421,6 @@ M.get_servers = function()
       '--offset-encoding=utf-16',
     } },
     gopls = M.GO,
-    pyright = {},
     rust_analyzer = M.RUST,
     vtsls = {
       handlers = M.TYPESCRIPT.handlers,
@@ -426,17 +488,19 @@ M.get_servers = function()
         client.server_capabilities.documentFormattingProvider = nil
       end,
     },
+    pyright = M.PYTHON.config.pyright,
+    ruff = M.PYTHON.config.ruff,
     -- intelephense is a node.js server, so it's pretty slow
     -- And can only running one thread
     -- Use phpactor instead for large files
     -- it's not as good as intelephense, but it's faster
-    intelephense = {
-      enabled = not M.PHP.working_large_file,
-    },
+    -- intelephense = {
+    --   enabled = not M.PHP.working_large_file,
+    -- },
     -- To install phpactor, need php8
-    phpactor = {
-      enabled = M.PHP.working_large_file,
-    },
+    -- phpactor = {
+    --   enabled = M.PHP.working_large_file,
+    -- },
     marksman = {},
     lua_ls = {
       settings = {

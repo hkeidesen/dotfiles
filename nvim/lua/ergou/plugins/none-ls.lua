@@ -3,7 +3,7 @@ return {
   {
     'nvimtools/none-ls.nvim',
     event = 'LazyFile',
-    enabled = not lsp_util.PHP.working_large_file,
+    enabled = true,
     dependencies = { 'davidmh/cspell.nvim' },
     config = function()
       local null_ls = require('null-ls')
@@ -34,9 +34,9 @@ return {
             end,
           }),
           cspell.code_actions.with({ config = cspellConfig }),
-          null_ls.builtins.diagnostics.phpcs.with({
-            extra_args = { '--standard=vendor/php-cs/ruleset.xml' },
-          }),
+          -- null_ls.builtins.diagnostics.phpcs.with({
+          --   extra_args = { '--standard=vendor/php-cs/ruleset.xml' },
+          -- }),
           null_ls.builtins.diagnostics.zsh,
           null_ls.builtins.code_actions.ts_node_action,
         },

@@ -12,11 +12,11 @@ return {
       local conform = require('conform')
 
       conform.setup({
-        formatters = {
-          phpcbf = {
-            prepend_args = { '--standard=vendor/php-cs/ruleset.xml' },
-          },
-        },
+        -- formatters = {
+        --   phpcbf = {
+        --     prepend_args = { '--standard=vendor/php-cs/ruleset.xml' },
+        --   },
+        -- },
         formatters_by_ft = {
           vue = eslintFormat,
           javascript = { 'prettierd' },
@@ -26,15 +26,14 @@ return {
           css = eslintFormat,
           scss = eslintFormat,
           html = eslintFormat,
-          json = eslintFormat,
+          json = {'prettierd '},
           jsonc = eslintFormat,
           json5 = eslintFormat,
           yaml = eslintFormat,
           markdown = eslintFormat,
           graphql = eslintFormat,
           lua = { 'stylua' },
-          python = { 'isort', 'black' },
-          php = { 'pint', 'phpcbf', stop_after_first = true },
+          python = { 'ruff' },
           zsh = { 'shfmt' },
           sh = { 'shfmt' },
           bash = { 'shfmt' },
@@ -50,14 +49,14 @@ return {
             timeout_ms = timeout,
           }
 
-          if ft == 'php' then
-            config.lsp_format = 'first'
-          end
+          -- if ft == 'php' then
+          --   config.lsp_format = 'first'
+          -- end
 
-          -- do not format blade file with html lsp
-          if ft == 'blade' then
-            config.lsp_format = 'never'
-          end
+          -- -- do not format blade file with html lsp
+          -- if ft == 'blade' then
+          --   config.lsp_format = 'never'
+          -- end
 
           return config
         end,

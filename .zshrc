@@ -172,10 +172,10 @@ source ~/.nvm/nvm.sh
 . "$HOME/.cargo/env" 
 
 # Bind Ctrl-r to fzf history search
-fzf-history-widget() {
-  local selected_command
-  selected_command=$(fc -rl 1 | fzf --height 40% --reverse --tac) && LBUFFER=$selected_command
-  zle redisplay
-}
-zle -N fzf-history-widget
-bindkey '^R' fzf-history-widget
+# fzf-history-widget() {
+#   local selected_command
+#   selected_command=$(fc -rl 1 | fzf --height 40% --reverse --tac) && LBUFFER=$selected_command
+#   zle redisplay
+# }
+# zle -N fzf-history-widget
+# bindkey '^R' fzf-history-widget

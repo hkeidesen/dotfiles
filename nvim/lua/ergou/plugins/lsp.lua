@@ -1,12 +1,12 @@
 local Util = require('ergou.util')
 local signs = Util.icons.diagnostics
+
 return {
   {
     -- LSP Configuration & Plugins
     'neovim/nvim-lspconfig',
     event = 'LazyFile',
     dependencies = {
-      ---@see lazyvim https://github.com/LazyVim/LazyVim/blob/6f91b406ddf2b298efe43f6467ca0a9103881a88/lua/lazyvim/plugins/lsp/init.lua#L259-L296
       {
         'williamboman/mason.nvim',
         cmd = 'Mason',
@@ -17,19 +17,16 @@ return {
           ensure_installed = {
             'stylua',
             'eslint_d',
-            'phpcbf',
             'cspell',
-            'phpcs',
             'prettierd',
+            'ruff',
           },
         },
-        ---@param opts MasonSettings | {ensure_installed: string[]}
         config = function(_, opts)
           require('mason').setup(opts)
           local mr = require('mason-registry')
           mr:on('package:install:success', function()
             vim.defer_fn(function()
-              -- trigger FileType event to possibly load this newly installed LSP server
               require('lazy.core.handler.event').trigger({
                 event = 'FileType',
                 buf = vim.api.nvim_get_current_buf(),
@@ -52,19 +49,14 @@ return {
         'utilyre/barbecue.nvim',
         name = 'barbecue',
         dependencies = {
-          {
-            'SmiteshP/nvim-navic',
-          },
+          { 'SmiteshP/nvim-navic' },
         },
         opts = { attach_navic = false },
       },
       { 'b0o/schemastore.nvim' },
     },
-    ---@class PluginLspOpts
     opts = {
-      ---@type vim.diagnostic.Opts
       inlay_hints = { enabled = true },
-      -- Enable lsp cursor word highlighting
       document_highlight = {
         enabled = true,
       },
@@ -74,9 +66,6 @@ return {
         virtual_text = {
           spacing = 4,
           source = 'if_many',
-          -- prefix = '●',
-          -- this will set set the prefix to a function that returns the diagnostics icon based on the severity
-          -- this only works on a recent 0.10.0 build. Will be set to "●" when not supported
           prefix = function(diagnostic)
             if diagnostic.severity == vim.diagnostic.severity.ERROR then
               return signs.Error
@@ -101,7 +90,6 @@ return {
         },
       },
     },
-    ---@param opts PluginLspOpts
     config = function(_, opts)
       local servers = Util.lsp.get_servers()
       local capabilities = vim.lsp.protocol.make_client_capabilities()
@@ -118,9 +106,14 @@ return {
         ensure_installed = ensure_install_servers,
         handlers = {
           function(server_name)
-            local server = servers[server_name] or {}
-            server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-            require('lspconfig')[server_name].setup(server)
+            if server_name ~= "pylsp" then
+              local server = servers[server_name] or {}
+              server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
+              require('lspconfig')[server_name].setup(server)
+            end
+            if server_name == 'tsserver' then
+              server_name ="ts_ls"
+            end
           end,
         },
       })

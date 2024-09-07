@@ -160,3 +160,8 @@ end, { desc = 'Toggle Wrap' })
 -- map('n', '<C-e>', function()
 --   toggle_telescope(harpoon_mark.get_all()) -- Fetches the marked files using Harpoon's API
 -- end, { desc = 'Open Harpoon Telescope Picker' })
+
+-- ensure delete don't affetc register or clipboard
+map('n', 'd', '"_d', { noremap = true, silent = true })
+map('v', 'd', '"_d', { noremap = true, silent = true })
+map('n', 'x', '"_x', { noremap = true, silent = true })
