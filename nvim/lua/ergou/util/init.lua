@@ -9,11 +9,12 @@ local LazyUtil = require('lazy.core.util')
 ---@field public neotree ergou.util.neotree
 ---@field public root ergou.util.root
 ---@field public snips ergou.util.snips
----@field public telescope ergou.util.telescope
 ---@field public ui ergou.util.ui
 ---@field public git ergou.util.git
 ---@field public cmp ergou.util.cmp
 ---@field public tsformat ergou.util.tsformat
+---@field public pick ergou.util.pick
+---@field public toggle ergou.util.toggle
 local M = {}
 
 setmetatable(M, {

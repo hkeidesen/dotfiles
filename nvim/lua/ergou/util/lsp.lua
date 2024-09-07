@@ -29,8 +29,8 @@ M.TYPESCRIPT.filetypes = {
   'typescript.tsx',
   'vue',
 }
-M.TYPESCRIPT.servers = { 'vtsls', 'tsserver' }
-M.TYPESCRIPT.server_to_use = 'tsserver'
+M.TYPESCRIPT.servers = { 'vtsls', 'ts_ls' }
+M.TYPESCRIPT.server_to_use = 'vtsls'
 M.TYPESCRIPT.vtsls_typescript_javascript_config = {
   updateImportsOnFileMove = { enabled = 'always' },
   suggest = {
@@ -39,10 +39,13 @@ M.TYPESCRIPT.vtsls_typescript_javascript_config = {
   inlayHints = {
     enumMemberValues = { enabled = true },
     functionLikeReturnTypes = { enabled = true },
-    parameterNames = { enabled = 'literals' },
+    parameterNames = { enabled = 'all' },
     parameterTypes = { enabled = true },
     propertyDeclarationTypes = { enabled = true },
     variableTypes = { enabled = false },
+  },
+  tsserver = {
+    maxTsServerMemory = 8192,
   },
 }
 M.TYPESCRIPT.handlers = {
@@ -51,7 +54,7 @@ M.TYPESCRIPT.handlers = {
       return
     end
 
-    -- ignore some ts_ls diagnostics
+    -- ignore some tsserver diagnostics
     local idx = 1
     while idx <= #result.diagnostics do
       local entry = result.diagnostics[idx]
@@ -71,6 +74,33 @@ M.TYPESCRIPT.handlers = {
     vim.lsp.diagnostic.on_publish_diagnostics(_, result, ctx, config)
   end,
 }
+---@param client vim.lsp.Client
+---@param _ integer
+M.TYPESCRIPT.on_attach = function(client, _)
+  local existing_capabilities = vim.deepcopy(client.server_capabilities)
+
+  if existing_capabilities == nil then
+    return
+  end
+
+  existing_capabilities.documentFormattingProvider = nil
+
+  if client.name == 'vtsls' then
+    local existing_filters = existing_capabilities.workspace.fileOperations.didRename.filters or {}
+    local new_glob = '**/*.{ts,cts,mts,tsx,js,cjs,mjs,jsx,vue}'
+
+    for _, filter in ipairs(existing_filters) do
+      if filter.pattern and filter.pattern.matches == 'file' then
+        filter.pattern.glob = new_glob
+        break
+      end
+    end
+
+    existing_capabilities.workspace.fileOperations.didRename.filters = existing_filters
+  end
+
+  client.server_capabilities = existing_capabilities
+end
 
 -- ESLINT
 M.ESLINT = {}
@@ -209,9 +239,7 @@ M.PYTHON.config = {
 }
 
 -- disable pylsp autostart
-require('lspconfig').pylsp.setup {
-  autostart = false,  -- Prevents pylsp from automatically starting
-}
+-- 
 
 function M.get_clients(opts)
   local ret = {} ---@type vim.lsp.Client[]
@@ -436,7 +464,7 @@ M.get_servers = function()
               enableServerSideFuzzyMatch = true,
             },
           },
-          tsserver = {
+          tss = {
             globalPlugins = {
               vue_plugin,
             },
