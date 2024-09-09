@@ -119,6 +119,7 @@ vim.schedule(function()
   vim.opt.clipboard = 'unnamedplus'
 end)
 
+
 -- Enable break indent
 vim.opt.breakindent = true
 
@@ -170,6 +171,7 @@ vim.keymap.set('n', 'dae', 'ggVGd', { noremap = true, silent = true, desc = 'Del
 vim.keymap.set('n', 'yae', 'ggVGy', { noremap = true, silent = true, desc = 'Yank entire file' })
 vim.keymap.set('n', 'cae', 'ggVG"_c', { noremap = true, silent = true, desc = 'Change entire file' })
 vim.keymap.set('n', 'vae', 'ggVG', { noremap = true, silent = true, desc = 'Select entire file' })
+
 
 
 -- Diagnostic keymaps
@@ -289,18 +291,32 @@ require('lazy').setup({
   -- after the plugin has been loaded:
   --  config = function() ... end
   {
+      'fedepujol/move.nvim',
+      config = true,
+      keys = {
+        { '<A-j>', ':MoveLine(1)<CR>', mode = { 'n' }, noremap = true, silent = true, desc = 'Move line down' },
+        { '<A-k>', ':MoveLine(-1)<CR>', mode = { 'n' }, noremap = true, silent = true, desc = 'Move line up' },
+        { '<A-j>', ':MoveBlock(1)<CR>', mode = { 'v' }, noremap = true, silent = true, desc = 'Move block down' },
+        { '<A-k>', ':MoveBlock(-1)<CR>', mode = { 'v' }, noremap = true, silent = true, desc = 'Move block up' },
+      },
+  },
+  {
     'zbirenbaum/copilot.lua',
     cmd = 'Copilot',
     event = 'InsertEnter',
     opts = {
       panel = {
-        enabled = true,
-        auto_refresh = true,
+        enabled = false,  -- Disable the Copilot panel UI since nvim-cmp will handle suggestions
       },
       suggestion = {
-        accept = false,
-        enabled = true,
+        enabled = true,  -- Enable suggestions to work with nvim-cmp
         auto_trigger = true,
+        -- keymap = {
+        --   accept = "<Tab>",  -- Use Tab to accept the suggestion
+        --   next = "<C-n>",    -- Use Ctrl-n to cycle through suggestions
+        --   prev = "<C-p>",    -- Use Ctrl-p to go back to the previous suggestion
+        --   dismiss = "<C-]>", -- Dismiss the suggestion with Ctrl-]
+        -- },
       },
       filetypes = {
         markdown = true,
@@ -390,6 +406,84 @@ require('lazy').setup({
       end,
     },
   },
+  {
+    'nvim-tree/nvim-tree.lua',
+    dependencies = {
+      'nvim-tree/nvim-web-devicons', -- optional, for file icons
+    },
+    config = function()
+      require('nvim-tree').setup({})
+    end,
+  },
+  {
+    "folke/flash.nvim",
+    event = "VeryLazy",
+    ---@type Flash.Config
+    opts = {},
+    -- stylua: ignore
+    keys = {
+      { "s", mode = { "n", "x", "o" }, function() require("flash").jump() end, desc = "Flash" },
+      { "S", mode = { "n", "x", "o" }, function() require("flash").treesitter() end, desc = "Flash Treesitter" },
+      { "r", mode = "o", function() require("flash").remote() end, desc = "Remote Flash" },
+      { "R", mode = { "o", "x" }, function() require("flash").treesitter_search() end, desc = "Treesitter Search" },
+      { "<c-s>", mode = { "c" }, function() require("flash").toggle() end, desc = "Toggle Flash Search" },
+    },
+  },
+  {
+    'Shatur/neovim-session-manager',
+    dependencies = { 'nvim-lua/plenary.nvim' },
+    config = function()
+      local Path = require('plenary.path')
+      local config = require('session_manager.config')
+      local config_group = vim.api.nvim_create_augroup('MyConfigGroup', {}) -- A global group for all your config autocommand
+  
+      require('session_manager').setup({
+        sessions_dir = Path:new(vim.fn.stdpath('data'), 'sessions'),
+        autoload_mode = config.AutoloadMode.LastSession,
+        autosave_last_session = true,
+        autosave_ignore_not_normal = true,
+        autosave_ignore_dirs = {},
+        autosave_ignore_filetypes = { 'gitcommit', 'gitrebase' },
+        autosave_ignore_buftypes = {},
+        autosave_only_in_session = false,
+        max_path_length = 80,
+      })
+      -- Auto save session
+      vim.api.nvim_create_autocmd({ 'BufWritePre' }, {
+        callback = function ()
+          for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+            -- Don't save while there's any 'nofile' buffer open.
+            if vim.api.nvim_get_option_value("buftype", { buf = buf }) == 'nofile' then
+              return
+            end
+          end
+          session_manager.save_current_session()
+        end
+      })
+      -- Auto load
+      vim.api.nvim_create_autocmd({ 'User' }, {
+        pattern = "SessionLoadPost",
+        group = config_group,
+        callback = function()
+          require('nvim-tree.api').tree.toggle(false, true)
+        end,
+      })
+      vim.keymap.set('n', '<leader>sml', '<cmd>SessionManager load_session<CR>', { desc = 'Load session' })
+      vim.keymap.set('n', '<leader>sms', '<cmd>SessionManager save_current_session<CR>', { desc = 'Save session' })
+      vim.keymap.set('n', '<leader>smd', '<cmd>SessionManager delete_session<CR>', { desc = 'Delete session' })
+
+      -- Autocommand to auto-open a file tree after loading a session
+      -- local config_group = vim.api.nvim_create_augroup('MyConfigGroup', {}) 
+      -- vim.api.nvim_create_autocmd({ 'User' }, {
+      --   pattern = "SessionLoadPost",
+      --   group = config_group,
+      --   callback = function()
+      --     require('nvim-tree.api').tree.toggle(false, true)
+      --   end,
+      -- })
+    end,
+  },
+
 
   -- Colorscheme
   { "catppuccin/nvim", name = "catppuccin", priority = 1000,
@@ -689,6 +783,10 @@ require('lazy').setup({
           -- or a suggestion from your LSP for this to activate.
           map('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction', { 'n', 'x' })
 
+          -- Open the diagnostics list for the current buffer.
+          map('<leader>cd', vim.diagnostic.open_float, '[C]ode [D]iagnostics', 'v')
+
+
           -- WARN: This is not Goto Definition, this is Goto Declaration.
           --  For example, in C this would take you to the header.
           map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
@@ -740,7 +838,28 @@ require('lazy').setup({
       --  So, we create new capabilities with nvim cmp, and then broadcast that to the servers.
       local capabilities = vim.lsp.protocol.make_client_capabilities()
       capabilities = vim.tbl_deep_extend('force', capabilities, require('cmp_nvim_lsp').default_capabilities())
-
+      
+      local function find_python_path()
+        -- Get the current working directory
+        local cwd = vim.fn.getcwd()
+      
+        -- Define possible locations of the Python interpreter within the project
+        local possible_paths = {
+          cwd .. "/venv/bin/python",   -- if you use a venv directory for virtualenv
+          cwd .. "/bin/python",        -- if virtualenv is directly under bin
+          "/usr/bin/python3",          -- fallback to system Python
+        }
+      
+        -- Check each path and return the first that exists
+        for _, path in ipairs(possible_paths) do
+          if vim.fn.filereadable(path) == 1 then
+            return path
+          end
+        end
+      
+        -- Fallback if no valid path is found (optional, consider a more robust handling)
+        return "/usr/bin/python3"
+      end
       -- Enable the following language servers
       --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
       --
@@ -798,9 +917,38 @@ require('lazy').setup({
 
 
       local lspconfig = require('lspconfig')
+
+      -- Vue
       local mason_registry = require('mason-registry')
       local vue_language_server_path = mason_registry.get_package('vue-language-server'):get_install_path() .. '/node_modules/@vue/language-server'
 
+
+      -- Python
+      lspconfig.pyright.setup({
+        capabilities = capabilities,
+        on_attach = function(client, bufnr)
+          client.server_capabilities.document_formatting = false -- disable formatting from LSP
+          -- Set up autoformat on save using Ruff
+          vim.api.nvim_create_autocmd("BufWritePre", {
+            buffer = bufnr,
+            callback = function()
+              vim.cmd('silent !ruff fmt --fast %')  -- Format the file using Ruff
+              vim.cmd('edit!')  -- Reload the buffer
+            end
+          })
+        end,
+        settings = {
+          python = {
+            analysis = {
+              typeCheckingMode = "basic",
+              autoSearchPaths = true,
+              useLibraryCodeForTypes = true,
+            },
+            pythonPath = find_python_path()
+          }
+        }
+      })
+      
       require('mason-lspconfig').setup {
         handlers = {
           function(server_name)
@@ -812,6 +960,7 @@ require('lazy').setup({
             -- by the server configuration above. Useful when disabling
             -- certain features of an LSP (for example, turning off formatting for tsserver)
             server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
+
             
             -- Custom configuration for tsserver (TypeScript/JavaScript)
             if server_name == 'ts_ls' then
@@ -834,6 +983,7 @@ require('lazy').setup({
               lspconfig.volar.setup {}
               return
             end
+
             require('lspconfig')[server_name].setup(server)
           end,
         },
@@ -876,7 +1026,7 @@ require('lazy').setup({
       formatters_by_ft = {
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
-        -- python = { "isort", "black" },
+        --python = { "isort", "ruff" },
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
         -- javascript = { "prettierd", "prettier", stop_after_first = true },
@@ -885,120 +1035,112 @@ require('lazy').setup({
   },
 
   { -- Autocompletion
-    'hrsh7th/nvim-cmp',
-    event = 'InsertEnter',
-    dependencies = {
-      -- Snippet Engine & its associated nvim-cmp source
-      {
-        'L3MON4D3/LuaSnip',
-        build = (function()
-          -- Build Step is needed for regex support in snippets.
-          -- This step is not supported in many windows environments.
-          -- Remove the below condition to re-enable on windows.
-          if vim.fn.has 'win32' == 1 or vim.fn.executable 'make' == 0 then
-            return
-          end
-          return 'make install_jsregexp'
-        end)(),
-        dependencies = {
-          -- `friendly-snippets` contains a variety of premade snippets.
-          --    See the README about individual language/framework/plugin snippets:
-          --    https://github.com/rafamadriz/friendly-snippets
-          -- {
-          --   'rafamadriz/friendly-snippets',
-          --   config = function()
-          --     require('luasnip.loaders.from_vscode').lazy_load()
-          --   end,
-          -- },
-        },
+  'hrsh7th/nvim-cmp',
+  event = 'InsertEnter',
+  dependencies = {
+    -- Snippet Engine & its associated nvim-cmp source
+    {
+      'L3MON4D3/LuaSnip',
+      build = (function()
+        -- Build Step is needed for regex support in snippets.
+        -- This step is not supported in many windows environments.
+        -- Remove the below condition to re-enable on windows.
+        if vim.fn.has 'win32' == 1 or vim.fn.executable 'make' == 0 then
+          return
+        end
+        return 'make install_jsregexp'
+      end)(),
+      dependencies = {
+        -- `friendly-snippets` contains a variety of premade snippets.
+        --    See the README about individual language/framework/plugin snippets:
+        --    https://github.com/rafamadriz/friendly-snippets
       },
-      'saadparwaiz1/cmp_luasnip',
-
-      -- Adds other completion capabilities.
-      --  nvim-cmp does not ship with all sources by default. They are split
-      --  into multiple repos for maintenance purposes.
-      'hrsh7th/cmp-nvim-lsp',
-      'hrsh7th/cmp-path',
     },
-    config = function()
-      -- See `:help cmp`
-      local cmp = require 'cmp'
-      local luasnip = require 'luasnip'
-      luasnip.config.setup {}
+    'saadparwaiz1/cmp_luasnip',
 
-      cmp.setup {
-        snippet = {
-          expand = function(args)
-            luasnip.lsp_expand(args.body)
-          end,
-        },
-        completion = { completeopt = 'menu,menuone,noinsert' },
+    -- Adds other completion capabilities.
+    --  nvim-cmp does not ship with all sources by default. They are split
+    --  into multiple repos for maintenance purposes.
+    'hrsh7th/cmp-nvim-lsp',
+    'hrsh7th/cmp-path',
 
-        -- For an understanding of why these mappings were
-        -- chosen, you will need to read `:help ins-completion`
-        --
-        -- No, but seriously. Please read `:help ins-completion`, it is really good!
-        mapping = cmp.mapping.preset.insert {
-          -- Select the [n]ext item
-          ['<C-n>'] = cmp.mapping.select_next_item(),
-          -- Select the [p]revious item
-          ['<C-p>'] = cmp.mapping.select_prev_item(),
-
-          -- Scroll the documentation window [b]ack / [f]orward
-          ['<C-b>'] = cmp.mapping.scroll_docs(-4),
-          ['<C-f>'] = cmp.mapping.scroll_docs(4),
-
-          -- Accept ([y]es) the completion.
-          --  This will auto-import if your LSP supports it.
-          --  This will expand snippets if the LSP sent a snippet.
-          ['<C-y>'] = cmp.mapping.confirm { select = true },
-
-          -- If you prefer more traditional completion keymaps,
-          -- you can uncomment the following lines
-          --['<CR>'] = cmp.mapping.confirm { select = true },
-          --['<Tab>'] = cmp.mapping.select_next_item(),
-          --['<S-Tab>'] = cmp.mapping.select_prev_item(),
-
-          -- Manually trigger a completion from nvim-cmp.
-          --  Generally you don't need this, because nvim-cmp will display
-          --  completions whenever it has completion options available.
-          ['<C-Space>'] = cmp.mapping.complete {},
-
-          -- Think of <c-l> as moving to the right of your snippet expansion.
-          --  So if you have a snippet that's like:
-          --  function $name($args)
-          --    $body
-          --  end
-          --
-          -- <c-l> will move you to the right of each of the expansion locations.
-          -- <c-h> is similar, except moving you backwards.
-          ['<C-l>'] = cmp.mapping(function()
-            if luasnip.expand_or_locally_jumpable() then
-              luasnip.expand_or_jump()
-            end
-          end, { 'i', 's' }),
-          ['<C-h>'] = cmp.mapping(function()
-            if luasnip.locally_jumpable(-1) then
-              luasnip.jump(-1)
-            end
-          end, { 'i', 's' }),
-
-          -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
-          --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
-        },
-        sources = {
-          {
-            name = 'lazydev',
-            -- set group index to 0 to skip loading LuaLS completions as lazydev recommends it
-            group_index = 0,
-          },
-          { name = 'nvim_lsp' },
-          { name = 'luasnip' },
-          { name = 'path' },
-        },
-      }
-    end,
+    -- Add copilot-cmp integration here
+    {
+      'zbirenbaum/copilot-cmp',
+      after = { 'copilot.lua' }, -- Ensure copilot is loaded before copilot-cmp
+    },
+    {
+      'zbirenbaum/copilot.lua',
+      cmd = 'Copilot',
+      event = 'InsertEnter',
+      opts = {
+        panel = { enabled = false }, -- Disable the Copilot UI panel, use cmp instead
+        suggestion = { enabled = false }, -- Disable built-in Copilot suggestions, let cmp handle them
+      },
+    },
   },
+  config = function()
+    -- See `:help cmp`
+    local cmp = require 'cmp'
+    local luasnip = require 'luasnip'
+    luasnip.config.setup {}
+
+    cmp.setup {
+      snippet = {
+        expand = function(args)
+          luasnip.lsp_expand(args.body)
+        end,
+      },
+      completion = { completeopt = 'menu,menuone,noinsert' },
+
+      -- For an understanding of why these mappings were chosen, you will need to read `:help ins-completion`
+      mapping = cmp.mapping.preset.insert {
+        -- Select the [n]ext item
+        ['<C-n>'] = cmp.mapping.select_next_item(),
+        -- Select the [p]revious item
+        ['<C-p>'] = cmp.mapping.select_prev_item(),
+
+        -- Scroll the documentation window [b]ack / [f]orward
+        ['<C-b>'] = cmp.mapping.scroll_docs(-4),
+        ['<C-f>'] = cmp.mapping.scroll_docs(4),
+
+        -- Accept ([y]es) the completion. This will auto-import if your LSP supports it.
+        ['<C-y>'] = cmp.mapping.confirm { select = true },
+
+        -- Manually trigger a completion from nvim-cmp.
+        ['<C-Space>'] = cmp.mapping.complete {},
+
+        -- Use Tab and Shift-Tab for navigation and confirmation
+        ['<Tab>'] = cmp.mapping(function(fallback)
+          if cmp.visible() then
+            cmp.select_next_item()
+          elseif luasnip.expand_or_jumpable() then
+            luasnip.expand_or_jump()
+          else
+            fallback()
+          end
+        end, { 'i', 's' }),
+
+        ['<S-Tab>'] = cmp.mapping(function(fallback)
+          if cmp.visible() then
+            cmp.select_prev_item()
+          elseif luasnip.jumpable(-1) then
+            luasnip.jump(-1)
+          else
+            fallback()
+          end
+        end, { 'i', 's' }),
+      },
+      sources = {
+        { name = 'copilot' }, -- Ensure Copilot source is listed here
+        { name = 'nvim_lsp' },
+        { name = 'luasnip' },
+        { name = 'path' },
+      },
+    }
+  end,
+},
+
 
   -- { -- You can easily change to a different colorscheme.
   --   -- Change the name of the colorscheme plugin below, and then
@@ -1127,6 +1269,7 @@ require('lazy').setup({
     },
   },
 })
+
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
