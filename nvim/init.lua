@@ -255,15 +255,37 @@ require('lazy').setup({
   -- See `:help gitsigns` to understand what the configuration keys do
   { -- Adds git related signs to the gutter, as well as utilities for managing changes
     'lewis6991/gitsigns.nvim',
-    opts = {
-      signs = {
-        add = { text = '+' },
-        change = { text = '~' },
-        delete = { text = '_' },
-        topdelete = { text = '‾' },
-        changedelete = { text = '~' },
-      },
-    },
+    -- opts = {
+    --   signs = {
+    --     add = { text = '+' },
+    --     change = { text = '~' },
+    --     delete = { text = 'x' }, --? or "_"?
+    --     topdelete = { text = '‾' },
+    --     changedelete = { text = '~' },
+    --   },
+    -- },
+    config = function()
+      require('gitsigns').setup {
+        signs = {
+          add = { text = '+' },
+          change = { text = '~' },
+          delete = { text = 'x' },  -- "_" can also be used based on your preference for visibility
+          topdelete = { text = '‾' },
+          changedelete = { text = '~' },
+        },
+        on_attach = function(bufnr)
+          -- local function buf_map(mode, lhs, rhs, opts)
+          --   opts = vim.tbl_extend('force', { noremap = true, silent = true }, opts or {})
+          --   vim.api.nvim_buf_set_keymap(bufnr, mode, lhs, rhs, opts)
+          -- end
+  
+          -- Actions
+          vim.keymap.set('n', '<leader>gb', '<cmd>lua require"gitsigns".blame_line{full=true}<CR>', { desc = 'Blame line' })
+          vim.keymap.set('n', '<leader>gB', '<cmd>lua require"gitsigns".toggle_current_line_blame()<CR>',{ desc = 'Toggle blame line' })
+          vim.keymap.set('n', '<leader>gd', '<cmd>lua require"gitsigns".diffthis()<CR>', { desc = 'Diff against HEAD' })
+        end
+      }
+    end
   },
   {
     "nvim-neo-tree/neo-tree.nvim",
@@ -416,6 +438,20 @@ require('lazy').setup({
     end,
   },
   {
+    'declancm/maximize.nvim',
+    opts = {},
+    keys = {
+      {
+        '<leader>z',
+        function()
+          require('maximize').toggle()
+        end,
+        mode = { 'n' },
+        desc = 'Maximize current window',
+      },
+    },
+  },
+  {
     "folke/flash.nvim",
     event = "VeryLazy",
     ---@type Flash.Config
@@ -483,16 +519,43 @@ require('lazy').setup({
       -- })
     end,
   },
+  {
+    "kdheepak/lazygit.nvim",
+    cmd = {
+      "LazyGit",
+      "LazyGitConfig",
+      "LazyGitCurrentFile",
+      "LazyGitFilter",
+      "LazyGitFilterCurrentFile",
+    },
+    -- optional for floating window border decoration
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+    },
+    -- setting the keybinding for LazyGit with 'keys' is recommended in
+    -- order to load the plugin when the command is run for the first time
+    keys = {
+      { "<leader>lg", "<cmd>LazyGit<cr>", desc = "LazyGit" }
+    }
+  },
 
 
   -- Colorscheme
-  { "catppuccin/nvim", name = "catppuccin", priority = 1000,
-  config = function ()
-    require("catppuccin").setup({
-      flavour = "frappe",
-    })
-  end
+  -- { "catppuccin/nvim", name = "catppuccin", priority = 1000,
+  -- config = function ()
+  --   require("catppuccin").setup({
+  --     flavour = "frappe",
+  --   })
+  -- end
+  -- },
+  {
+    "shaunsingh/nord.nvim",
+    priority = 1000,
+    config = function()
+      vim.cmd.colorscheme "nord"
+    end,
   },
+
   { -- Fuzzy Finder (files, lsp, etc)
     'nvim-telescope/telescope.nvim',
     event = 'VimEnter',
@@ -521,6 +584,12 @@ require('lazy').setup({
         branch = "harpoon2",
         dependencies = { "nvim-lua/plenary.nvim" }
       },
+      { 
+        "nvim-telescope/telescope-live-grep-args.nvim" ,
+        -- This will not install any breaking changes.
+        -- For major updates, this must be adjusted manually.
+        version = "^1.0.0",
+    },
    
 
     },
@@ -546,6 +615,7 @@ require('lazy').setup({
 
       -- [[ Configure Telescope ]]
       -- See `:help telescope` and `:help telescope.setup()`
+      local lga_actions = require("telescope-live-grep-args.actions")
       require('telescope').setup {
         -- You can put your default mappings / updates / etc. in here
         --  All the info you're looking for is in `:help telescope.setup()`
@@ -560,12 +630,24 @@ require('lazy').setup({
           ['ui-select'] = {
             require('telescope.themes').get_dropdown(),
           },
+          live_grep_args = {
+            auto_quoting = true,
+            mappings = {
+              i = {
+                ["<C-k>"] = lga_actions.quote_prompt(),
+                ["<C-i>"] = lga_actions.quote_prompt({ postfix = " --iglob " }),
+                ["<C-space>"] = require('telescope.actions').to_fuzzy_refine,
+              },
+            },
+          },
+        
         },
       }
 
       -- Enable Telescope extensions if they are installed
       pcall(require('telescope').load_extension, 'fzf')
       pcall(require('telescope').load_extension, 'ui-select')
+      pcall(require('telescope').load_extension, 'live_grep_args')
 
       -- See `:help telescope.builtin`
       local builtin = require 'telescope.builtin'
@@ -575,6 +657,7 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
       vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
       vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
+      vim.keymap.set('n', "<leader>sG", ":lua require('telescope').extensions.live_grep_args.live_grep_args()<CR>", { desc = '[S]earch by [G]rep with [A]rgs' })
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
@@ -659,6 +742,14 @@ require('lazy').setup({
     },
   },
   {
+    'nvim-treesitter/nvim-treesitter-context',
+    config = function()
+      require('treesitter-context').setup({
+        max_lines = 1, 
+      })
+    end
+  },
+  {
     'stevearc/oil.nvim',
     opts = {
       delete_to_trash = true,
@@ -740,6 +831,7 @@ require('lazy').setup({
       vim.api.nvim_create_autocmd('LspAttach', {
         group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
         callback = function(event)
+          
           -- NOTE: Remember that Lua is a real programming language, and as such it is possible
           -- to define small helper and utility functions so you don't have to repeat yourself.
           --
@@ -990,8 +1082,8 @@ require('lazy').setup({
       }
     end,
   },
-
-  { -- Autoformat
+  { 
+    -- Autoformat
     'stevearc/conform.nvim',
     event = { 'BufWritePre' },
     cmd = { 'ConformInfo' },
@@ -1025,15 +1117,25 @@ require('lazy').setup({
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
+        vue = {'eslint_d', 'prettier'},
+        python = { 'ruff' }
         -- Conform can also run multiple formatters sequentially
         --python = { "isort", "ruff" },
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
         -- javascript = { "prettierd", "prettier", stop_after_first = true },
       },
+      -- Preserve cursor position during format
+      hooks = {
+        before_format = function(bufnr)
+          vim.b.saved_view = vim.fn.winsaveview() -- Save current cursor position
+        end,
+        after_format = function(bufnr)
+          vim.fn.winrestview(vim.b.saved_view) -- Restore cursor position
+        end,
+      },
     },
-  },
-
+  },  
   { -- Autocompletion
   'hrsh7th/nvim-cmp',
   event = 'InsertEnter',
@@ -1064,7 +1166,6 @@ require('lazy').setup({
     'hrsh7th/cmp-nvim-lsp',
     'hrsh7th/cmp-path',
 
-    -- Add copilot-cmp integration here
     {
       'zbirenbaum/copilot-cmp',
       after = { 'copilot.lua' }, -- Ensure copilot is loaded before copilot-cmp
@@ -1074,8 +1175,8 @@ require('lazy').setup({
       cmd = 'Copilot',
       event = 'InsertEnter',
       opts = {
-        panel = { enabled = false }, -- Disable the Copilot UI panel, use cmp instead
-        suggestion = { enabled = false }, -- Disable built-in Copilot suggestions, let cmp handle them
+        panel = { enabled = true },
+        suggestion = { enabled = true },
       },
     },
   },
@@ -1086,6 +1187,7 @@ require('lazy').setup({
     luasnip.config.setup {}
 
     cmp.setup {
+    
       snippet = {
         expand = function(args)
           luasnip.lsp_expand(args.body)
@@ -1112,15 +1214,18 @@ require('lazy').setup({
 
         -- Use Tab and Shift-Tab for navigation and confirmation
         ['<Tab>'] = cmp.mapping(function(fallback)
-          if cmp.visible() then
-            cmp.select_next_item()
+          local has_copilot, copilot = pcall(require, 'copilot.suggestion')
+          if has_copilot then
+            if copilot.is_visible() then
+              copilot.accept()
+            end
           elseif luasnip.expand_or_jumpable() then
             luasnip.expand_or_jump()
           else
             fallback()
           end
         end, { 'i', 's' }),
-
+        
         ['<S-Tab>'] = cmp.mapping(function(fallback)
           if cmp.visible() then
             cmp.select_prev_item()
@@ -1132,7 +1237,7 @@ require('lazy').setup({
         end, { 'i', 's' }),
       },
       sources = {
-        { name = 'copilot' }, -- Ensure Copilot source is listed here
+        { name = 'copilot' },
         { name = 'nvim_lsp' },
         { name = 'luasnip' },
         { name = 'path' },
@@ -1273,4 +1378,6 @@ require('lazy').setup({
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
-vim.cmd.colorscheme "catppuccin"
+-- vim.cmd.colorscheme "catppuccin"
+--Lua:
+vim.cmd[[colorscheme nord]]
