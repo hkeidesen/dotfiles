@@ -367,7 +367,7 @@ require('lazy').setup({
         pattern = "SessionLoadPost",
         group = config_group,
         callback = function()
-          require('nvim-tree.api').tree.toggle(false, true)
+          require('neo-tree.command').execute { action = "focus" }
         end,
       })
       vim.keymap.set('n', '<leader>sml', '<cmd>SessionManager load_session<CR>', { desc = 'Load session' })
