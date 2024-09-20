@@ -193,6 +193,7 @@ require('lazy').setup({
               'thumbs.db',
               'desktop.ini',
               '__pycache__',
+              '.vscode'
             },
           },
           follow_current_file = {
@@ -766,29 +767,40 @@ require('lazy').setup({
 
 
       -- Python
-      lspconfig.pyright.setup({
+      lspconfig.ruff.setup({
         capabilities = capabilities,
         on_attach = function(client, bufnr)
+          -- Disable document formatting for Ruff to avoid conflicts
           client.server_capabilities.document_formatting = false
           vim.api.nvim_create_autocmd("BufWritePre", {
             buffer = bufnr,
             callback = function()
-              vim.cmd('silent !ruff fmt --safe %')
-              vim.cmd('edit!')
+              vim.lsp.buf.format({ timeout_ms = 1000, async = false })
             end
           })
         end,
+        init_options = {
+          settings = {
+            logLevel = 'debug',
+          }
+        }
+      })
+      require('lspconfig').pyright.setup({
         settings = {
+          pyright = {
+            disableOrganizeImports = true,
+          },
           python = {
             analysis = {
               typeCheckingMode = "basic",
               autoSearchPaths = true,
               useLibraryCodeForTypes = true,
+              ignore = { "*" },
             },
-            pythonPath = find_python_path()
-          }
+          },
         }
       })
+      
       
       require('mason-lspconfig').setup {
         handlers = {
@@ -826,7 +838,7 @@ require('lazy').setup({
       }
     end,
   },
-  { 
+  {
     -- Autoformat
     'stevearc/conform.nvim',
     event = { 'BufWritePre' },
@@ -858,8 +870,8 @@ require('lazy').setup({
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
-        vue = {'eslint_d', 'prettier'},
-        python = { 'ruff' }
+        vue = { 'eslint_d', 'prettier' },
+        python = { 'ruff_format' }
       },
       -- Preserve cursor position during format
       hooks = {
@@ -871,7 +883,7 @@ require('lazy').setup({
         end,
       },
     },
-  },  
+  },
   { -- Autocompletion
   'hrsh7th/nvim-cmp',
   event = 'InsertEnter',
