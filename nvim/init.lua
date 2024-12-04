@@ -71,6 +71,11 @@ vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right win
 vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 
+-- Spectre
+vim.keymap.set('n', '<leader>S', '<cmd>lua require("spectre").open()<CR>', { desc = 'Open Spectre' })
+vim.keymap.set('n', '<leader>sw', '<cmd>lua require("spectre").open_visual({select_word=true})<CR>', { desc = 'Search current word' })
+vim.keymap.set('v', '<leader>sw', '<cmd>lua require("spectre").open_visual()<CR>', { desc = 'Search selected word' })
+
 vim.api.nvim_create_autocmd('TextYankPost', {
   desc = 'Highlight when yanking (copying) text',
   group = vim.api.nvim_create_augroup('kickstart-highlight-yank', { clear = true }),
@@ -205,24 +210,6 @@ require('lazy').setup({
     },
   },
   {
-    'zbirenbaum/copilot.lua',
-    -- cmd = 'Copilot',
-    -- event = 'InsertEnter',
-    -- opts = {
-    --   panel = {
-    --     enabled = false
-    --   },
-    --   suggestion = {
-    --     enabled = false
-    -- },
-    config = function()
-      require('copilot').setup {
-        suggestion = { enabled = false },
-        panel = { enabled = false },
-      }
-    end,
-  },
-  {
     'folke/which-key.nvim',
     event = 'VimEnter', -- Sets the loading event to 'VimEnter'
     opts = {
@@ -280,14 +267,26 @@ require('lazy').setup({
     dependencies = { 'kevinhwang91/promise-async' },
     init = function()
       vim.o.foldcolumn = '1'
-      vim.o.foldlevel = 99 -- Using ufo provider need a large value, feel free to decrease the value
-      vim.o.foldlevelstart = 99
+      vim.o.foldlevel = 99
+      vim.o.foldlevelstart = 999
       vim.o.foldenable = true
     end,
     opts = {
       provider_selector = function()
         return { 'treesitter', 'indent' }
       end,
+      preview = {
+        win_config = {
+          border = { '', '', '', '', '', '', '', '' }, -- No border
+          winblend = 10, -- Transparency
+          maxheight = 20, -- Maximum height of the preview window
+          maxwidth = 80, -- Maximum width of the preview window
+        },
+        mappings = {
+          scrollU = '<C-u>', -- Scroll up in the preview
+          scrollD = '<C-d>', -- Scroll down in the preview
+        },
+      },
     },
   },
   {
@@ -304,6 +303,100 @@ require('lazy').setup({
       },
     },
   },
+  {
+    'nvim-pack/nvim-spectre',
+    dependencies = { 'nvim-lua/plenary.nvim' },
+    config = function()
+      require('spectre').setup {
+        highlight = {
+          search = 'Search',
+          replace = 'IncSearch',
+        },
+        mapping = {
+          -- Custom key mappings (optional)
+          ['toggle_line'] = {
+            map = 'dd', -- Use 'dd' to toggle an entry in Spectre
+            cmd = "<cmd>lua require('spectre').toggle_line()<CR>",
+            desc = 'toggle current item',
+          },
+          ['enter_replace_mode'] = {
+            map = 'r',
+            cmd = "<cmd>lua require('spectre').open_replace_mode()<CR>",
+            desc = 'enter replace mode',
+          },
+        },
+      }
+    end,
+  },
+  {
+    'folke/trouble.nvim',
+    opts = {
+      {
+        modes = {
+          preview_float = {
+            mode = 'diagnostics',
+            preview = {
+              type = 'float',
+              relative = 'editor',
+              border = 'rounded',
+              title = 'Preview',
+              title_pos = 'center',
+              position = { 0, -2 },
+              size = { width = 0.3, height = 0.3 },
+              zindex = 200,
+            },
+          },
+        },
+      },
+    },
+    cmd = 'Trouble',
+    keys = {
+      {
+        '<leader>xx',
+        '<cmd>Trouble diagnostics toggle<cr>',
+        desc = 'Diagnostics (Trouble)',
+      },
+      {
+        '<leader>xX',
+        '<cmd>Trouble diagnostics toggle filter.buf=0<cr>',
+        desc = 'Buffer Diagnostics (Trouble)',
+      },
+      {
+        '<leader>cs',
+        '<cmd>Trouble symbols toggle focus=false<cr>',
+        desc = 'Symbols (Trouble)',
+      },
+      {
+        '<leader>cl',
+        '<cmd>Trouble lsp toggle focus=false win.position=right<cr>',
+        desc = 'LSP Definitions / references / ... (Trouble)',
+      },
+      {
+        '<leader>xL',
+        '<cmd>Trouble loclist toggle<cr>',
+        desc = 'Location List (Trouble)',
+      },
+      {
+        '<leader>xQ',
+        '<cmd>Trouble qflist toggle<cr>',
+        desc = 'Quickfix List (Trouble)',
+      },
+    },
+  },
+  {
+    'rachartier/tiny-inline-diagnostic.nvim',
+    event = 'VeryLazy', -- Or `LspAttach`
+    priority = 1000, -- needs to be loaded in first
+    config = function()
+      require('tiny-inline-diagnostic').setup {
+        options = {
+          show_source = false,
+          throttle = 0,
+        },
+      }
+    end,
+  },
+
   {
     'kylechui/nvim-surround',
     version = '*', -- Use for stability; omit to use `main` branch for the latest features
@@ -403,11 +496,16 @@ require('lazy').setup({
         end,
       })
       -- Auto load
-      vim.api.nvim_create_autocmd({ 'User' }, {
+      vim.api.nvim_create_autocmd('User', {
         pattern = 'SessionLoadPost',
         group = config_group,
         callback = function()
-          require('neo-tree.command').execute { action = 'focus' }
+          -- Refresh diagnostics for all buffers
+          for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+            if vim.api.nvim_buf_is_loaded(bufnr) and vim.bo[bufnr].filetype == 'python' then
+              vim.lsp.buf_request(bufnr, 'textDocument/publishDiagnostics', {}, function() end)
+            end
+          end
         end,
       })
       vim.keymap.set('n', '<leader>sml', '<cmd>SessionManager load_session<CR>', { desc = 'Load session' })
@@ -432,21 +530,13 @@ require('lazy').setup({
     },
   },
 
-  -- Colorscheme
-  -- config = function ()
-  --   require("catppuccin").setup({
-  --     flavour = "frappe",
-  --   })
-  -- end
-  -- },
-  -- {
-  --   'shaunsingh/nord.nvim',
-  --   priority = 1000,
-  --   config = function()
-  --     vim.cmd.colorscheme 'nord'
-  --   end,
-  -- },
-  { 'ellisonleao/gruvbox.nvim', priority = 1000, config = true, opts = ... },
+  {
+    'wnkz/monoglow.nvim',
+    lazy = false,
+    priority = 1000,
+    opts = {},
+  },
+
   { -- Fuzzy Finder (files, lsp, etc)
     'nvim-telescope/telescope.nvim',
     event = 'VimEnter',
@@ -483,6 +573,7 @@ require('lazy').setup({
       },
     },
     config = function()
+      local actions = require 'telescope.actions'
       local lga_actions = require 'telescope-live-grep-args.actions'
       require('telescope').setup {
         extensions = {
@@ -493,6 +584,10 @@ require('lazy').setup({
             auto_quoting = true,
             mappings = {
               i = {
+                ['<C-q>'] = function(prompt_bufnr)
+                  actions.send_to_qflist(prompt_bufnr)
+                  vim.cmd 'cdo set modifiable'
+                end,
                 ['<C-k>'] = lga_actions.quote_prompt(),
                 ['<C-i>'] = lga_actions.quote_prompt { postfix = ' --iglob ' },
                 ['<C-space>'] = require('telescope.actions').to_fuzzy_refine,
@@ -520,6 +615,32 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
       vim.keymap.set('n', '<leader>bb', '<cmd>b#<CR>', { desc = 'Switch to the last buffer' })
       vim.keymap.set('n', '<leader>bd', '<cmd>:bd<CR>', { desc = 'Buffer delete' })
+      vim.keymap.set('n', 'zp', require('ufo').peekFoldedLinesUnderCursor, { desc = 'Preview folded text under cursor' })
+
+      -- Substitute
+      vim.keymap.set('n', 'sx', require('substitute.exchange').operator, {
+        noremap = true,
+        silent = true,
+        desc = 'Start substitution exchange with a motion (e.g., sxiw for word)',
+      })
+
+      vim.keymap.set('n', 'sxx', require('substitute.exchange').line, {
+        noremap = true,
+        silent = true,
+        desc = 'Exchange the entire current line',
+      })
+
+      vim.keymap.set('x', 'X', require('substitute.exchange').visual, {
+        noremap = true,
+        silent = true,
+        desc = 'Exchange the selected text in visual mode',
+      })
+
+      vim.keymap.set('n', 'sxc', require('substitute.exchange').cancel, {
+        noremap = true,
+        silent = true,
+        desc = 'Cancel the current substitution exchange operation',
+      })
 
       -- Slightly advanced example of overriding default behavior and theme
       vim.keymap.set('n', '<leader>/', function()
@@ -743,27 +864,6 @@ require('lazy').setup({
       local capabilities = vim.lsp.protocol.make_client_capabilities()
       capabilities = vim.tbl_deep_extend('force', capabilities, require('cmp_nvim_lsp').default_capabilities())
 
-      local function find_python_path()
-        -- Get the current working directory
-        local cwd = vim.fn.getcwd()
-
-        -- Define possible locations of the Python interpreter within the project
-        local possible_paths = {
-          cwd .. '/venv/bin/python', -- if you use a venv directory for virtualenv
-          cwd .. '/bin/python', -- if virtualenv is directly under bin
-          '/usr/bin/python3', -- fallback to system Python
-        }
-
-        -- Check each path and return the first that exists
-        for _, path in ipairs(possible_paths) do
-          if vim.fn.filereadable(path) == 1 then
-            return path
-          end
-        end
-
-        -- Fallback if no valid path is found (optional, consider a more robust handling)
-        return '/usr/bin/python3'
-      end
       local servers = {
 
         lua_ls = {
@@ -788,47 +888,34 @@ require('lazy').setup({
 
       -- Python
       lspconfig.ruff.setup {
-        capabilities = capabilities,
+        init_options = {
+          settings = {
+            configurationPreference = 'filesystemFirst',
+            fixAll = true,
+            organizeImports = true,
+            lint = {
+              enable = true,
+            },
+            lineLength = 120,
+          },
+        },
         on_attach = function(client, bufnr)
-          -- Disable document formatting for Ruff to avoid conflicts
-          client.server_capabilities.document_formatting = false
           vim.api.nvim_create_autocmd('BufWritePre', {
             buffer = bufnr,
             callback = function()
-              vim.lsp.buf.format { timeout_ms = 1000, async = false }
+              vim.lsp.buf.format { async = false }
             end,
           })
         end,
-        init_options = {
-          settings = {
-            logLevel = 'debug',
-          },
-        },
       }
-      require('lspconfig').pyright.setup {
-        settings = {
-          pyright = {
-            disableOrganizeImports = true,
-          },
-          python = {
-            analysis = {
-              typeCheckingMode = 'basic',
-              autoSearchPaths = true,
-              useLibraryCodeForTypes = true,
-              indexing = true,
-              diagnosticSeverityOverrides = {
-                reportMissingImports = 'none',
-              },
-            },
-          },
-        },
-      }
-
       require('mason-lspconfig').setup {
         handlers = {
           function(server_name)
             if server_name == 'tsserver' then
               server_name = 'ts_ls'
+            end
+            if server_name == 'emmet_ls' or server_name == 'tailwindcss' or server_name == 'htmx' then
+              return
             end
             local server = servers[server_name] or {}
             server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
@@ -935,6 +1022,9 @@ require('lazy').setup({
             enabled = true,
             auto_trigger = false,
           },
+          panel = {
+            enabled = false,
+          },
         },
         config = function(_, opts)
           require('copilot').setup(opts)
@@ -959,8 +1049,6 @@ require('lazy').setup({
           ['<C-p>'] = cmp.mapping.select_prev_item(),
           ['<C-b>'] = cmp.mapping.scroll_docs(-4),
           ['<C-f>'] = cmp.mapping.scroll_docs(4),
-
-          -- Only confirm with <CR> if an item is actively selected
           ['<CR>'] = cmp.mapping(function(fallback)
             if cmp.visible() and cmp.get_selected_entry() then
               cmp.confirm { select = true }
@@ -972,14 +1060,22 @@ require('lazy').setup({
           ['<C-Space>'] = cmp.mapping.complete {},
           ['<Tab>'] = cmp.mapping(function(fallback)
             if cmp.visible() then
-              cmp.select_next_item()
+              if cmp.get_selected_entry() then
+                cmp.select_next_item()
+              else
+                fallback()
+              end
             else
               fallback()
             end
           end, { 'i', 's' }),
           ['<S-Tab>'] = cmp.mapping(function(fallback)
             if cmp.visible() then
-              cmp.select_prev_item()
+              if cmp.get_selected_entry() then
+                cmp.select_prev_item()
+              else
+                fallback()
+              end
             else
               fallback()
             end
@@ -987,16 +1083,54 @@ require('lazy').setup({
         },
 
         sources = cmp.config.sources {
-          { name = 'copilot', group_index = 2 },
+          -- {
+          --   name = 'copilot',
+          --   group_index = 2,
+          --   trigger = function()
+          --     local line = vim.api.nvim_get_current_line()
+          --     local col = vim.api.nvim_win_get_cursor(0)[2]
+          --     local prefix = line:sub(1, col)
+          --
+          --     return #prefix > 0
+          --   end,
+          -- },
           { name = 'nvim_lsp', group_index = 2 },
           { name = 'luasnip', group_index = 2 },
           { name = 'buffer', group_index = 2 },
           { name = 'path', group_index = 2 },
         },
+        formatting = {
+          expandable_indicator = true,
+          fields = { 'kind', 'abbr', 'menu' },
+          format = function(entry, item)
+            local icons = {
+              copilot = '',
+              nvim_lsp = '',
+              luasnip = '',
+              buffer = '﬘',
+              path = '',
+            }
+            item.menu = icons[entry.source.name] or ''
+            return item
+          end,
+        },
       }
     end,
   },
-  { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
+  { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = true } },
+  {
+    'NeogitOrg/neogit',
+    dependencies = {
+      'nvim-lua/plenary.nvim', -- required
+      'sindrets/diffview.nvim', -- optional - Diff integration
+
+      -- Only one of these is needed.
+      'nvim-telescope/telescope.nvim', -- optional
+      'ibhagwan/fzf-lua', -- optional
+      'echasnovski/mini.pick', -- optional
+    },
+    config = true,
+  },
   {
     'numToStr/Comment.nvim',
     opts = {
@@ -1009,6 +1143,14 @@ require('lazy').setup({
         ---Add comment at the end of line
         eol = 'gcA',
       },
+    },
+  },
+  {
+    'gbprod/substitute.nvim',
+    opts = {
+      -- your configuration comes here
+      -- or leave it empty to use the default settings
+      -- refer to the configuration section below
     },
   },
   {
@@ -1033,9 +1175,7 @@ require('lazy').setup({
       auto_install = true,
       highlight = {
         enable = true,
-        additional_vim_regex_highlighting = { 'ruby' },
       },
-      indent = { enable = true, disable = { 'ruby' } },
     },
   },
 }, {
@@ -1058,30 +1198,31 @@ require('lazy').setup({
   },
 })
 
+vim.cmd [[colorscheme monoglow-lack]]
+vim.cmd [[
+  highlight Normal guibg=#000000 guifg=#ffffff
+  highlight NonText guibg=#000000 guifg=#505050
+]]
+vim.o.termguicolors = true
 vim.o.background = 'dark'
-require('gruvbox').setup {
-  terminal_colors = true, -- add neovim terminal colors
-  undercurl = true,
+-- Squiggly line
+-- Red, wavy underline for errors
+vim.cmd [[highlight DiagnosticUnderlineError gui=undercurl guisp=#FF0000]]
+
+-- Orange, wavy underline for warnings and unnecessary
+vim.cmd [[highlight DiagnosticUnderlineWarn gui=undercurl guisp=#FFA500]]
+vim.cmd [[ highlight DiagnosticUnnecessary gui=undercurl guisp=#FFA500]]
+
+-- Blue, wavy underline for information
+vim.cmd [[highlight DiagnosticUnderlineInfo gui=undercurl guisp=#0000FF]]
+
+-- Gray, wavy underline for hints
+vim.cmd [[highlight DiagnosticUnderlineHint gui=undercurl guisp=#808080]]
+-- tiny-inline-diagnostic
+vim.diagnostic.config {
+  severity_sort = false,
+  signs = true,
   underline = true,
-  bold = true,
-  italic = {
-    strings = true,
-    emphasis = true,
-    comments = true,
-    operators = false,
-    folds = true,
-  },
-  strikethrough = true,
-  invert_selection = false,
-  invert_signs = false,
-  invert_tabline = false,
-  invert_intend_guides = false,
-  inverse = true, -- invert background for search, diffs, statuslines and errors
-  contrast = 'soft', -- can be "hard", "soft" or empty string
-  palette_overrides = {},
-  overrides = {},
-  dim_inactive = false,
-  transparent_mode = false,
+  update_in_insert = false,
+  virtual_text = false,
 }
-vim.cmd 'colorscheme gruvbox'
-vim.cmd [[colorscheme gruvbox]]

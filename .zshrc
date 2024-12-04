@@ -11,7 +11,9 @@ fi
 
 # Path to your Oh My Zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
-
+# UTF-8
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time Oh My Zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
@@ -141,6 +143,9 @@ setopt inc_append_history  # Write to history immediately
 export PATH=/opt/homebrew/bin:$PATH
 export GCLOUD_CONFIG_PATH="$HOME/.config/gcloud"
 
+#Cloud proxy
+export GOOGLE_APPLICATION_CREDENTIALS="/Users/hk/Projects/mlink-monorepo/backend/mlink/mlink-test-3be1cb689e17.json"
+
 
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f '/Users/hk/google-cloud-sdk/path.zsh.inc' ]; then
@@ -179,3 +184,5 @@ source ~/.nvm/nvm.sh
 # }
 # zle -N fzf-history-widget
 # bindkey '^R' fzf-history-widget
+
+. "$HOME/.local/bin/env"
