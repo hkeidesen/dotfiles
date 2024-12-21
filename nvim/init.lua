@@ -3,6 +3,7 @@ vim.g.maplocalleader = ' '
 vim.g.have_nerd_font = true
 
 vim.opt.number = true
+vim.opt.relativenumber = true
 vim.opt.mouse = 'a'
 
 vim.opt.showmode = false
@@ -41,6 +42,10 @@ vim.opt.splitbelow = true
 vim.opt.list = true
 vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
 
+-- Cycle keymaps
+vim.keymap.set('n', '<leader>cn', '<cmd>cnext<CR>', { noremap = true, silent = true, desc = 'Cycle next' })
+vim.keymap.set('n', '<leader>cp', '<cmd>cprev<CR>', { noremap = true, silent = true, desc = 'Cycle previous' })
+
 -- Preview substitutions live, as you type!
 vim.opt.inccommand = 'split'
 
@@ -62,19 +67,43 @@ vim.keymap.set('n', 'cae', 'ggVG"_c', { noremap = true, silent = true, desc = 'C
 vim.keymap.set('n', 'vae', 'ggVG', { noremap = true, silent = true, desc = 'Select entire file' })
 
 -- Diagnostic keymaps
-vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
+vim.keymap.set('n', '<C-q>', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
 
-vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
+-- Opening new terminals
+vim.api.nvim_create_autocmd('TermOpen', {
+  group = vim.api.nvim_create_augroup('custom-term-open', { clear = true }),
+  callback = function()
+    vim.opt.number = false
+    vim.opt.relativenumber = false
+  end,
+})
+
+local job_id = 0
+local function create_small_terminal()
+  vim.cmd.vnew()
+  vim.cmd.term()
+  vim.cmd.wincmd 'J'
+  vim.api.nvim_win_set_height(0, 10)
+  job_id = vim.bo.channel
+end
+
+vim.keymap.set('n', '<space>st', function()
+  create_small_terminal()
+end, { desc = 'Crete a new small terminal' })
+
+vim.keymap.set('n', '<leader>test', function()
+  if job_id == 0 then
+    create_small_terminal()
+  end
+  vim.fn.chansend(job_id, { "echo 'run tests!'\r\n" })
+end, { desc = 'Find and run tests in current directory' })
+
+vim.keymap.set('t', '<esc><esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
 vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
 vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
 vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
-
--- Spectre
-vim.keymap.set('n', '<leader>S', '<cmd>lua require("spectre").open()<CR>', { desc = 'Open Spectre' })
-vim.keymap.set('n', '<leader>sw', '<cmd>lua require("spectre").open_visual({select_word=true})<CR>', { desc = 'Search current word' })
-vim.keymap.set('v', '<leader>sw', '<cmd>lua require("spectre").open_visual()<CR>', { desc = 'Search selected word' })
 
 vim.api.nvim_create_autocmd('TextYankPost', {
   desc = 'Highlight when yanking (copying) text',
@@ -114,6 +143,20 @@ require('lazy').setup({
         end,
       }
     end,
+  },
+  {
+    'mistricky/codesnap.nvim',
+    build = 'make',
+    keys = {
+      { '<leader>cc', '<cmd>CodeSnapHighlight<cr>', mode = 'x', desc = 'Save selected code snapshot into clipboard' },
+      { '<leader>cs', '<cmd>CodeSnapSaveHighlight<cr>', mode = 'x', desc = 'Save selected code snapshot in ~/Desktop' },
+    },
+    opts = {
+      save_path = '~/Desktop',
+      has_breadcrumbs = true,
+      bg_theme = 'sea',
+      watermark = '',
+    },
   },
   {
     'nvim-neo-tree/neo-tree.nvim',
@@ -199,16 +242,16 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>e', '<cmd>Neotree toggle<CR>', { desc = 'Toggle Neotree' })
     end,
   },
-  {
-    'fedepujol/move.nvim',
-    config = true,
-    keys = {
-      { '<A-j>', ':MoveLine(1)<CR>', mode = { 'n' }, noremap = true, silent = true, desc = 'Move line down' },
-      { '<A-k>', ':MoveLine(-1)<CR>', mode = { 'n' }, noremap = true, silent = true, desc = 'Move line up' },
-      { '<A-j>', ':MoveBlock(1)<CR>', mode = { 'v' }, noremap = true, silent = true, desc = 'Move block down' },
-      { '<A-k>', ':MoveBlock(-1)<CR>', mode = { 'v' }, noremap = true, silent = true, desc = 'Move block up' },
-    },
-  },
+  -- {
+  --   'fedepujol/move.nvim',
+  --   config = true,
+  --   keys = {
+  --     { '<A-j>', ':MoveLine(1)<CR>', mode = { 'n' }, noremap = true, silent = true, desc = 'Move line down' },
+  --     { '<A-k>', ':MoveLine(-1)<CR>', mode = { 'n' }, noremap = true, silent = true, desc = 'Move line up' },
+  --     { '<A-j>', ':MoveBlock(1)<CR>', mode = { 'v' }, noremap = true, silent = true, desc = 'Move block down' },
+  --     { '<A-k>', ':MoveBlock(-1)<CR>', mode = { 'v' }, noremap = true, silent = true, desc = 'Move block up' },
+  --   },
+  -- },
   {
     'folke/which-key.nvim',
     event = 'VimEnter', -- Sets the loading event to 'VimEnter'
@@ -303,31 +346,31 @@ require('lazy').setup({
       },
     },
   },
-  {
-    'nvim-pack/nvim-spectre',
-    dependencies = { 'nvim-lua/plenary.nvim' },
-    config = function()
-      require('spectre').setup {
-        highlight = {
-          search = 'Search',
-          replace = 'IncSearch',
-        },
-        mapping = {
-          -- Custom key mappings (optional)
-          ['toggle_line'] = {
-            map = 'dd', -- Use 'dd' to toggle an entry in Spectre
-            cmd = "<cmd>lua require('spectre').toggle_line()<CR>",
-            desc = 'toggle current item',
-          },
-          ['enter_replace_mode'] = {
-            map = 'r',
-            cmd = "<cmd>lua require('spectre').open_replace_mode()<CR>",
-            desc = 'enter replace mode',
-          },
-        },
-      }
-    end,
-  },
+  -- {
+  --   'nvim-pack/nvim-spectre',
+  --   dependencies = { 'nvim-lua/plenary.nvim' },
+  --   config = function()
+  --     require('spectre').setup {
+  --       highlight = {
+  --         search = 'Search',
+  --         replace = 'IncSearch',
+  --       },
+  --       mapping = {
+  --         -- Custom key mappings (optional)
+  --         ['toggle_line'] = {
+  --           map = 'dd', -- Use 'dd' to toggle an entry in Spectre
+  --           cmd = "<cmd>lua require('spectre').toggle_line()<CR>",
+  --           desc = 'toggle current item',
+  --         },
+  --         ['enter_replace_mode'] = {
+  --           map = 'r',
+  --           cmd = "<cmd>lua require('spectre').open_replace_mode()<CR>",
+  --           desc = 'enter replace mode',
+  --         },
+  --       },
+  --     }
+  --   end,
+  -- },
   {
     'folke/trouble.nvim',
     opts = {
@@ -351,13 +394,13 @@ require('lazy').setup({
     },
     cmd = 'Trouble',
     keys = {
+      -- {
+      --   '<leader>xx',
+      --   '<cmd>Trouble diagnostics toggle<cr>',
+      --   desc = 'Diagnostics (Trouble)',
+      -- },
       {
         '<leader>xx',
-        '<cmd>Trouble diagnostics toggle<cr>',
-        desc = 'Diagnostics (Trouble)',
-      },
-      {
-        '<leader>xX',
         '<cmd>Trouble diagnostics toggle filter.buf=0<cr>',
         desc = 'Buffer Diagnostics (Trouble)',
       },
@@ -389,9 +432,12 @@ require('lazy').setup({
     priority = 1000, -- needs to be loaded in first
     config = function()
       require('tiny-inline-diagnostic').setup {
+        preset = 'classic',
         options = {
-          show_source = false,
+          show_source = true,
           throttle = 0,
+          multiple_diag_under_cursor = true,
+          -- use_icons_from_diagnostic = true,
         },
       }
     end,
@@ -456,79 +502,81 @@ require('lazy').setup({
       },
     },
   },
-  {
-    'Shatur/neovim-session-manager',
-    dependencies = { 'nvim-lua/plenary.nvim' },
-    config = function()
-      local Path = require 'plenary.path'
-      local config = require 'session_manager.config'
-      local config_group = vim.api.nvim_create_augroup('MyConfigGroup', {}) -- A global group for all your config autocommand
 
-      require('session_manager').setup {
-        sessions_dir = Path:new(vim.fn.stdpath 'data', 'sessions'),
-        autoload_mode = config.AutoloadMode.LastSession,
-        autosave_last_session = true,
-        autosave_ignore_not_normal = true,
-        autosave_ignore_dirs = {},
-        autosave_ignore_filetypes = { 'gitcommit', 'gitrebase' },
-        autosave_ignore_buftypes = {},
-        autosave_only_in_session = false,
-        max_path_length = 80,
-      }
-      vim.api.nvim_create_autocmd('VimEnter', {
-        callback = function()
-          -- Only change to the current directory if no file or directory is specified
-          if vim.fn.argc() == 0 then
-            vim.cmd('lcd ' .. vim.fn.getcwd())
-          end
-        end,
-      })
-      -- Auto save session
-      vim.api.nvim_create_autocmd({ 'BufWritePre' }, {
-        callback = function()
-          local session_manager = require 'session_manager' -- Load the module here
-          for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-            if vim.api.nvim_get_option_value('buftype', { buf = buf }) == 'nofile' then
-              return
-            end
-          end
-          session_manager.save_current_session()
-        end,
-      })
-      -- Auto load
-      vim.api.nvim_create_autocmd('User', {
-        pattern = 'SessionLoadPost',
-        group = config_group,
-        callback = function()
-          -- Refresh diagnostics for all buffers
-          for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-            if vim.api.nvim_buf_is_loaded(bufnr) and vim.bo[bufnr].filetype == 'python' then
-              vim.lsp.buf_request(bufnr, 'textDocument/publishDiagnostics', {}, function() end)
-            end
-          end
-        end,
-      })
-      vim.keymap.set('n', '<leader>sml', '<cmd>SessionManager load_session<CR>', { desc = 'Load session' })
-      vim.keymap.set('n', '<leader>sms', '<cmd>SessionManager save_current_session<CR>', { desc = 'Save session' })
-      vim.keymap.set('n', '<leader>smd', '<cmd>SessionManager delete_session<CR>', { desc = 'Delete session' })
-    end,
-  },
-  {
-    'kdheepak/lazygit.nvim',
-    cmd = {
-      'LazyGit',
-      'LazyGitConfig',
-      'LazyGitCurrentFile',
-      'LazyGitFilter',
-      'LazyGitFilterCurrentFile',
-    },
-    dependencies = {
-      'nvim-lua/plenary.nvim',
-    },
-    keys = {
-      { '<leader>lg', '<cmd>LazyGit<cr>', desc = 'LazyGit' },
-    },
-  },
+  -- {
+  --   'Shatur/neovim-session-manager',
+  --   dependencies = { 'nvim-lua/plenary.nvim' },
+  --   config = function()
+  --     local Path = require 'plenary.path'
+  --     local config = require 'session_manager.config'
+  --     local config_group = vim.api.nvim_create_augroup('MyConfigGroup', {}) -- A global group for all your config autocommand
+  --
+  --     require('session_manager').setup {
+  --       sessions_dir = Path:new(vim.fn.stdpath 'data', 'sessions'),
+  --       autoload_mode = config.AutoloadMode.LastSession,
+  --       autosave_last_session = true,
+  --       autosave_ignore_not_normal = true,
+  --       autosave_ignore_dirs = {},
+  --       autosave_ignore_filetypes = { 'gitcommit', 'gitrebase' },
+  --       autosave_ignore_buftypes = {},
+  --       autosave_only_in_session = false,
+  --       max_path_length = 80,
+  --     }
+  --     vim.api.nvim_create_autocmd('VimEnter', {
+  --       callback = function()
+  --         -- Only change to the current directory if no file or directory is specified
+  --         if vim.fn.argc() == 0 then
+  --           vim.cmd('lcd ' .. vim.fn.getcwd())
+  --         end
+  --       end,
+  --     })
+  --     -- Auto save session
+  --     vim.api.nvim_create_autocmd({ 'BufWritePre' }, {
+  --       callback = function()
+  --         local session_manager = require 'session_manager' -- Load the module here
+  --         for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+  --           if vim.api.nvim_get_option_value('buftype', { buf = buf }) == 'nofile' then
+  --             return
+  --           end
+  --         end
+  --         session_manager.save_current_session()
+  --       end,
+  --     })
+  --     -- Auto load
+  --     vim.api.nvim_create_autocmd('User', {
+  --       pattern = 'SessionLoadPost',
+  --       group = config_group,
+  --       callback = function()
+  --         -- Refresh diagnostics for all buffers
+  --         for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+  --           if vim.api.nvim_buf_is_loaded(bufnr) and vim.bo[bufnr].filetype == 'python' then
+  --             vim.lsp.buf_request(bufnr, 'textDocument/publishDiagnostics', {}, function() end)
+  --           end
+  --         end
+  --       end,
+  --     })
+  --     vim.keymap.set('n', '<leader>sml', '<cmd>SessionManager load_session<CR>', { desc = 'Load session' })
+  --     vim.keymap.set('n', '<leader>sms', '<cmd>SessionManager save_current_session<CR>', { desc = 'Save session' })
+  --     vim.keymap.set('n', '<leader>smd', '<cmd>SessionManager delete_session<CR>', { desc = 'Delete session' })
+  --   end,
+  -- },
+
+  -- {
+  --   'kdheepak/lazygit.nvim',
+  --   cmd = {
+  --     'LazyGit',
+  --     'LazyGitConfig',
+  --     'LazyGitCurrentFile',
+  --     'LazyGitFilter',
+  --     'LazyGitFilterCurrentFile',
+  --   },
+  --   dependencies = {
+  --     'nvim-lua/plenary.nvim',
+  --   },
+  --   keys = {
+  --     { '<leader>lg', '<cmd>LazyGit<cr>', desc = 'LazyGit' },
+  --   },
+  -- },
 
   {
     'wnkz/monoglow.nvim',
@@ -680,19 +728,6 @@ require('lazy').setup({
         harpoon:list():clear()
       end, { desc = 'Clear Harpoon' })
 
-      vim.keymap.set('n', '<C-h>', function()
-        harpoon:list():select(1)
-      end, { desc = 'Select Harpoon list 1' })
-      vim.keymap.set('n', '<C-t>', function()
-        harpoon:list():select(2)
-      end, { desc = 'Select Harpoon list 2' })
-      vim.keymap.set('n', '<C-n>', function()
-        harpoon:list():select(3)
-      end, { desc = 'Select Harpoon list 3' })
-      vim.keymap.set('n', '<C-s>', function()
-        harpoon:list():select(4)
-      end, { desc = 'Select Harpoon list 4' })
-
       -- Toggle previous & next buffers stored within Harpoon list
       vim.keymap.set('n', '<C-S-P>', function()
         harpoon:list():prev()
@@ -742,10 +777,11 @@ require('lazy').setup({
     'nvim-treesitter/nvim-treesitter-context',
     config = function()
       require('treesitter-context').setup {
-        max_lines = 1,
+        max_lines = 2,
       }
     end,
   },
+
   {
     'stevearc/oil.nvim',
     opts = {
@@ -802,6 +838,26 @@ require('lazy').setup({
 
           -- Find references for the word under your cursor.
           map('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
+          vim.keymap.set('n', 'grr', function()
+            vim.lsp.buf.references(nil, { includeDeclaration = true }, function(err, result, ctx, config)
+              if err then
+                vim.notify('Error getting references: ' .. err.message, vim.log.levels.ERROR)
+                return
+              end
+              if not result or vim.tbl_isempty(result) then
+                vim.notify('No references found', vim.log.levels.INFO)
+                return
+              end
+
+              -- Convert results to a quickfix list format
+              vim.fn.setqflist({}, ' ', {
+                title = 'LSP References',
+                items = vim.lsp.util.locations_to_items(result, 0),
+              })
+
+              vim.cmd 'copen'
+            end)
+          end, { desc = '[G]oto [R]eferences -> Quickfix' })
 
           -- Jump to the implementation of the word under your cursor.
           --  Useful when your language has ways of declaring types without an actual implementation.
@@ -890,12 +946,12 @@ require('lazy').setup({
       lspconfig.ruff.setup {
         init_options = {
           settings = {
-            configurationPreference = 'filesystemFirst',
-            fixAll = true,
-            organizeImports = true,
-            lint = {
-              enable = true,
-            },
+            -- configurationPreference = 'filesystemFirst',
+            -- fixAll = true,
+            -- organizeImports = true,
+            -- lint = {
+            --   enable = true,
+            -- },
             lineLength = 120,
           },
         },
@@ -921,6 +977,7 @@ require('lazy').setup({
             server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
 
             lspconfig.ts_ls.setup {
+              capabilities = capabilities,
               init_options = {
                 plugins = {
                   {
@@ -930,7 +987,7 @@ require('lazy').setup({
                   },
                 },
               },
-              filetypes = { 'vue' },
+              filetypes = { 'javascript', 'typescript', 'vue' },
             }
 
             -- Custom configuration for Volar (Vue Language Server)
@@ -965,14 +1022,14 @@ require('lazy').setup({
       {
         '<leader>f',
         function()
-          require('conform').format { async = true, lsp_format = 'fallback' }
+          require('conform').format { async = true }
         end,
         mode = '',
         desc = '[F]ormat buffer',
       },
     },
     opts = {
-      notify_on_error = false,
+      notify_on_error = true,
       format_on_save = function(bufnr)
         local disable_filetypes = { c = true, cpp = true }
         local lsp_format_opt
@@ -987,23 +1044,48 @@ require('lazy').setup({
         }
       end,
       formatters_by_ft = {
-        lua = { 'stylua' },
-        vue = { 'eslint_d', 'prettier' },
-        python = { 'ruff_format' },
-        typescript = { 'eslint_d', 'prettier' },
         javascript = { 'eslint_d', 'prettier' },
         json = { 'prettier' },
+        lua = { 'stylua' },
+        python = { 'ruff_fix', 'ruff_format', 'ruff_organize_imports' },
+        scss = { 'prettier' },
+        typescript = { 'eslint_d', 'prettier' },
+        vue = { 'eslint_d', 'prettier' },
       },
       hooks = {
         before_format = function(bufnr)
-          vim.b.saved_view = vim.fn.winsaveview() -- Save current cursor position
+          vim.b.saved_view = vim.fn.winsaveview()
         end,
         after_format = function(bufnr)
-          vim.fn.winrestview(vim.b.saved_view) -- Restore cursor position
+          vim.fn.winrestview(vim.b.saved_view)
         end,
       },
     },
   },
+  {
+    'NvChad/nvim-colorizer.lua',
+    event = 'BufReadPre',
+    opts = { -- set to setup table
+    },
+  },
+  {
+    'mfussenegger/nvim-lint',
+    config = function()
+      -- Configuration for nvim-lint
+      require('lint').linters_by_ft = {
+        javascript = { 'eslint_d' },
+        typescript = { 'eslint_d' },
+        vue = { 'eslint_d' },
+      }
+
+      -- Automatically lint when files are saved
+      vim.cmd [[
+      autocmd BufWritePost <buffer> lua require('lint').try_lint()
+    ]]
+    end,
+  },
+  { 'wakatime/vim-wakatime', lazy = false },
+
   {
     'hrsh7th/nvim-cmp',
     event = 'InsertEnter',
@@ -1013,7 +1095,8 @@ require('lazy').setup({
       'hrsh7th/cmp-buffer',
       'hrsh7th/cmp-nvim-lua',
       'L3MON4D3/LuaSnip',
-      'saadparwaiz1/cmp_luasnip',
+      -- 'saadparwaiz1/cmp_luasnip',
+      'rafamadriz/friendly-snippets',
       {
         'zbirenbaum/copilot.lua',
         event = 'InsertEnter',
@@ -1040,15 +1123,33 @@ require('lazy').setup({
     },
     config = function()
       local cmp = require 'cmp'
+      local luasnip = require 'luasnip'
+      --
+      -- Load snippets from friendly-snippets
+      require('luasnip.loaders.from_vscode').lazy_load()
+      --
+
+      -- Load custom LuaSnip snippets
+
+      require('luasnip.loaders.from_lua').load { paths = { vim.fn.stdpath 'config' .. '/snippets/' } }
+
+      -- Extend filetypes for LuaSnip
+      luasnip.filetype_extend('vue', { 'html', 'javascript', 'typescript' })
+      luasnip.filetype_extend('javascriptreact', { 'html', 'javascript' })
+      luasnip.filetype_extend('typescriptreact', { 'html', 'typescript' })
 
       cmp.setup {
-        completion = { completeopt = 'menu,menuone,noselect' },
-
+        snippet = {
+          expand = function(args)
+            luasnip.lsp_expand(args.body)
+          end,
+        },
         mapping = cmp.mapping.preset.insert {
           ['<C-n>'] = cmp.mapping.select_next_item(),
           ['<C-p>'] = cmp.mapping.select_prev_item(),
           ['<C-b>'] = cmp.mapping.scroll_docs(-4),
           ['<C-f>'] = cmp.mapping.scroll_docs(4),
+          ['<C-Space>'] = cmp.mapping.complete {},
           ['<CR>'] = cmp.mapping(function(fallback)
             if cmp.visible() and cmp.get_selected_entry() then
               cmp.confirm { select = true }
@@ -1056,44 +1157,26 @@ require('lazy').setup({
               fallback()
             end
           end),
-
-          ['<C-Space>'] = cmp.mapping.complete {},
           ['<Tab>'] = cmp.mapping(function(fallback)
             if cmp.visible() then
-              if cmp.get_selected_entry() then
-                cmp.select_next_item()
-              else
-                fallback()
-              end
+              cmp.select_next_item()
+            elseif luasnip.expand_or_jumpable() then
+              luasnip.expand_or_jump()
             else
               fallback()
             end
           end, { 'i', 's' }),
           ['<S-Tab>'] = cmp.mapping(function(fallback)
             if cmp.visible() then
-              if cmp.get_selected_entry() then
-                cmp.select_prev_item()
-              else
-                fallback()
-              end
+              cmp.select_prev_item()
+            elseif luasnip.jumpable(-1) then
+              luasnip.jump(-1)
             else
               fallback()
             end
           end, { 'i', 's' }),
         },
-
         sources = cmp.config.sources {
-          -- {
-          --   name = 'copilot',
-          --   group_index = 2,
-          --   trigger = function()
-          --     local line = vim.api.nvim_get_current_line()
-          --     local col = vim.api.nvim_win_get_cursor(0)[2]
-          --     local prefix = line:sub(1, col)
-          --
-          --     return #prefix > 0
-          --   end,
-          -- },
           { name = 'nvim_lsp', group_index = 2 },
           { name = 'luasnip', group_index = 2 },
           { name = 'buffer', group_index = 2 },
@@ -1115,8 +1198,15 @@ require('lazy').setup({
           end,
         },
       }
+
+      -- Optional: Additional LuaSnip configuration
+      luasnip.config.set_config {
+        history = true,
+        updateevents = 'TextChanged,TextChangedI',
+      }
     end,
   },
+
   { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = true } },
   {
     'NeogitOrg/neogit',
