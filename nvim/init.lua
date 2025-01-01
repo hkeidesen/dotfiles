@@ -123,6 +123,7 @@ end ---@diagnostic disable-next-line: undefined-field
 vim.opt.rtp:prepend(lazypath)
 
 require('lazy').setup({
+  { import = 'custom/plugins' },
   'tpope/vim-sleuth',
   { -- Adds git related signs to the gutter, as well as utilities for managing changes
     'lewis6991/gitsigns.nvim',
@@ -143,20 +144,6 @@ require('lazy').setup({
         end,
       }
     end,
-  },
-  {
-    'mistricky/codesnap.nvim',
-    build = 'make',
-    keys = {
-      { '<leader>cc', '<cmd>CodeSnapHighlight<cr>', mode = 'x', desc = 'Save selected code snapshot into clipboard' },
-      { '<leader>cs', '<cmd>CodeSnapSaveHighlight<cr>', mode = 'x', desc = 'Save selected code snapshot in ~/Desktop' },
-    },
-    opts = {
-      save_path = '~/Desktop',
-      has_breadcrumbs = true,
-      bg_theme = 'sea',
-      watermark = '',
-    },
   },
   {
     'nvim-neo-tree/neo-tree.nvim',
@@ -242,16 +229,6 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>e', '<cmd>Neotree toggle<CR>', { desc = 'Toggle Neotree' })
     end,
   },
-  -- {
-  --   'fedepujol/move.nvim',
-  --   config = true,
-  --   keys = {
-  --     { '<A-j>', ':MoveLine(1)<CR>', mode = { 'n' }, noremap = true, silent = true, desc = 'Move line down' },
-  --     { '<A-k>', ':MoveLine(-1)<CR>', mode = { 'n' }, noremap = true, silent = true, desc = 'Move line up' },
-  --     { '<A-j>', ':MoveBlock(1)<CR>', mode = { 'v' }, noremap = true, silent = true, desc = 'Move block down' },
-  --     { '<A-k>', ':MoveBlock(-1)<CR>', mode = { 'v' }, noremap = true, silent = true, desc = 'Move block up' },
-  --   },
-  -- },
   {
     'folke/which-key.nvim',
     event = 'VimEnter', -- Sets the loading event to 'VimEnter'
@@ -346,86 +323,6 @@ require('lazy').setup({
       },
     },
   },
-  -- {
-  --   'nvim-pack/nvim-spectre',
-  --   dependencies = { 'nvim-lua/plenary.nvim' },
-  --   config = function()
-  --     require('spectre').setup {
-  --       highlight = {
-  --         search = 'Search',
-  --         replace = 'IncSearch',
-  --       },
-  --       mapping = {
-  --         -- Custom key mappings (optional)
-  --         ['toggle_line'] = {
-  --           map = 'dd', -- Use 'dd' to toggle an entry in Spectre
-  --           cmd = "<cmd>lua require('spectre').toggle_line()<CR>",
-  --           desc = 'toggle current item',
-  --         },
-  --         ['enter_replace_mode'] = {
-  --           map = 'r',
-  --           cmd = "<cmd>lua require('spectre').open_replace_mode()<CR>",
-  --           desc = 'enter replace mode',
-  --         },
-  --       },
-  --     }
-  --   end,
-  -- },
-  {
-    'folke/trouble.nvim',
-    opts = {
-      {
-        modes = {
-          preview_float = {
-            mode = 'diagnostics',
-            preview = {
-              type = 'float',
-              relative = 'editor',
-              border = 'rounded',
-              title = 'Preview',
-              title_pos = 'center',
-              position = { 0, -2 },
-              size = { width = 0.3, height = 0.3 },
-              zindex = 200,
-            },
-          },
-        },
-      },
-    },
-    cmd = 'Trouble',
-    keys = {
-      -- {
-      --   '<leader>xx',
-      --   '<cmd>Trouble diagnostics toggle<cr>',
-      --   desc = 'Diagnostics (Trouble)',
-      -- },
-      {
-        '<leader>xx',
-        '<cmd>Trouble diagnostics toggle filter.buf=0<cr>',
-        desc = 'Buffer Diagnostics (Trouble)',
-      },
-      {
-        '<leader>cs',
-        '<cmd>Trouble symbols toggle focus=false<cr>',
-        desc = 'Symbols (Trouble)',
-      },
-      {
-        '<leader>cl',
-        '<cmd>Trouble lsp toggle focus=false win.position=right<cr>',
-        desc = 'LSP Definitions / references / ... (Trouble)',
-      },
-      {
-        '<leader>xL',
-        '<cmd>Trouble loclist toggle<cr>',
-        desc = 'Location List (Trouble)',
-      },
-      {
-        '<leader>xQ',
-        '<cmd>Trouble qflist toggle<cr>',
-        desc = 'Quickfix List (Trouble)',
-      },
-    },
-  },
   {
     'rachartier/tiny-inline-diagnostic.nvim',
     event = 'VeryLazy', -- Or `LspAttach`
@@ -442,324 +339,11 @@ require('lazy').setup({
       }
     end,
   },
-
-  {
-    'kylechui/nvim-surround',
-    version = '*', -- Use for stability; omit to use `main` branch for the latest features
-    event = 'VeryLazy',
-    config = function()
-      require('nvim-surround').setup {
-        -- Configuration here, or leave empty to use defaults
-      }
-    end,
-  },
-  {
-    'folke/flash.nvim',
-    event = 'VeryLazy',
-    ---@type Flash.Config
-    opts = {},
-    -- stylua: ignores
-    keys = {
-      {
-        's',
-        mode = { 'n', 'o' },
-        function()
-          require('flash').jump()
-        end,
-        desc = 'Flash',
-      }, -- Remove "x" for visual mode
-      {
-        'S',
-        mode = { 'n', 'o' },
-        function()
-          require('flash').treesitter()
-        end,
-        desc = 'Flash Treesitter',
-      }, -- Remove "x" for visual mode
-      {
-        'r',
-        mode = 'o',
-        function()
-          require('flash').remote()
-        end,
-        desc = 'Remote Flash',
-      },
-      {
-        'R',
-        mode = { 'o' },
-        function()
-          require('flash').treesitter_search()
-        end,
-        desc = 'Treesitter Search',
-      },
-      {
-        '<c-s>',
-        mode = { 'c' },
-        function()
-          require('flash').toggle()
-        end,
-        desc = 'Toggle Flash Search',
-      },
-    },
-  },
-
-  -- {
-  --   'Shatur/neovim-session-manager',
-  --   dependencies = { 'nvim-lua/plenary.nvim' },
-  --   config = function()
-  --     local Path = require 'plenary.path'
-  --     local config = require 'session_manager.config'
-  --     local config_group = vim.api.nvim_create_augroup('MyConfigGroup', {}) -- A global group for all your config autocommand
-  --
-  --     require('session_manager').setup {
-  --       sessions_dir = Path:new(vim.fn.stdpath 'data', 'sessions'),
-  --       autoload_mode = config.AutoloadMode.LastSession,
-  --       autosave_last_session = true,
-  --       autosave_ignore_not_normal = true,
-  --       autosave_ignore_dirs = {},
-  --       autosave_ignore_filetypes = { 'gitcommit', 'gitrebase' },
-  --       autosave_ignore_buftypes = {},
-  --       autosave_only_in_session = false,
-  --       max_path_length = 80,
-  --     }
-  --     vim.api.nvim_create_autocmd('VimEnter', {
-  --       callback = function()
-  --         -- Only change to the current directory if no file or directory is specified
-  --         if vim.fn.argc() == 0 then
-  --           vim.cmd('lcd ' .. vim.fn.getcwd())
-  --         end
-  --       end,
-  --     })
-  --     -- Auto save session
-  --     vim.api.nvim_create_autocmd({ 'BufWritePre' }, {
-  --       callback = function()
-  --         local session_manager = require 'session_manager' -- Load the module here
-  --         for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-  --           if vim.api.nvim_get_option_value('buftype', { buf = buf }) == 'nofile' then
-  --             return
-  --           end
-  --         end
-  --         session_manager.save_current_session()
-  --       end,
-  --     })
-  --     -- Auto load
-  --     vim.api.nvim_create_autocmd('User', {
-  --       pattern = 'SessionLoadPost',
-  --       group = config_group,
-  --       callback = function()
-  --         -- Refresh diagnostics for all buffers
-  --         for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-  --           if vim.api.nvim_buf_is_loaded(bufnr) and vim.bo[bufnr].filetype == 'python' then
-  --             vim.lsp.buf_request(bufnr, 'textDocument/publishDiagnostics', {}, function() end)
-  --           end
-  --         end
-  --       end,
-  --     })
-  --     vim.keymap.set('n', '<leader>sml', '<cmd>SessionManager load_session<CR>', { desc = 'Load session' })
-  --     vim.keymap.set('n', '<leader>sms', '<cmd>SessionManager save_current_session<CR>', { desc = 'Save session' })
-  --     vim.keymap.set('n', '<leader>smd', '<cmd>SessionManager delete_session<CR>', { desc = 'Delete session' })
-  --   end,
-  -- },
-
-  -- {
-  --   'kdheepak/lazygit.nvim',
-  --   cmd = {
-  --     'LazyGit',
-  --     'LazyGitConfig',
-  --     'LazyGitCurrentFile',
-  --     'LazyGitFilter',
-  --     'LazyGitFilterCurrentFile',
-  --   },
-  --   dependencies = {
-  --     'nvim-lua/plenary.nvim',
-  --   },
-  --   keys = {
-  --     { '<leader>lg', '<cmd>LazyGit<cr>', desc = 'LazyGit' },
-  --   },
-  -- },
-
   {
     'wnkz/monoglow.nvim',
     lazy = false,
     priority = 1000,
     opts = {},
-  },
-
-  { -- Fuzzy Finder (files, lsp, etc)
-    'nvim-telescope/telescope.nvim',
-    event = 'VimEnter',
-    branch = '0.1.x',
-    dependencies = {
-      'nvim-lua/plenary.nvim',
-      { -- If encountering errors, see telescope-fzf-native README for installation instructions
-        'nvim-telescope/telescope-fzf-native.nvim',
-
-        -- `build` is used to run some command when the plugin is installed/updated.
-        -- This is only run then, not every time Neovim starts up.
-        build = 'make',
-
-        -- `cond` is a condition used to determine whether this plugin should be
-        -- installed and loaded.
-        cond = function()
-          return vim.fn.executable 'make' == 1
-        end,
-      },
-      { 'nvim-telescope/telescope-ui-select.nvim' },
-
-      -- Useful for getting pretty icons, but requires a Nerd Font.
-      { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
-      {
-        'ThePrimeagen/harpoon',
-        branch = 'harpoon2',
-        dependencies = { 'nvim-lua/plenary.nvim' },
-      },
-      {
-        'nvim-telescope/telescope-live-grep-args.nvim',
-        -- This will not install any breaking changes.
-        -- For major updates, this must be adjusted manually.
-        version = '^1.0.0',
-      },
-    },
-    config = function()
-      local actions = require 'telescope.actions'
-      local lga_actions = require 'telescope-live-grep-args.actions'
-      require('telescope').setup {
-        extensions = {
-          ['ui-select'] = {
-            require('telescope.themes').get_dropdown(),
-          },
-          live_grep_args = {
-            auto_quoting = true,
-            mappings = {
-              i = {
-                ['<C-q>'] = function(prompt_bufnr)
-                  actions.send_to_qflist(prompt_bufnr)
-                  vim.cmd 'cdo set modifiable'
-                end,
-                ['<C-k>'] = lga_actions.quote_prompt(),
-                ['<C-i>'] = lga_actions.quote_prompt { postfix = ' --iglob ' },
-                ['<C-space>'] = require('telescope.actions').to_fuzzy_refine,
-              },
-            },
-          },
-        },
-      }
-
-      pcall(require('telescope').load_extension, 'fzf')
-      pcall(require('telescope').load_extension, 'ui-select')
-      pcall(require('telescope').load_extension, 'live_grep_args')
-
-      local builtin = require 'telescope.builtin'
-      vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
-      vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
-      vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
-      vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
-      vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
-      vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
-      vim.keymap.set('n', '<leader>sG', ":lua require('telescope').extensions.live_grep_args.live_grep_args()<CR>", { desc = '[S]earch by [G]rep with [A]rgs' })
-      vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
-      vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
-      vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
-      vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
-      vim.keymap.set('n', '<leader>bb', '<cmd>b#<CR>', { desc = 'Switch to the last buffer' })
-      vim.keymap.set('n', '<leader>bd', '<cmd>:bd<CR>', { desc = 'Buffer delete' })
-      vim.keymap.set('n', 'zp', require('ufo').peekFoldedLinesUnderCursor, { desc = 'Preview folded text under cursor' })
-
-      -- Substitute
-      vim.keymap.set('n', 'sx', require('substitute.exchange').operator, {
-        noremap = true,
-        silent = true,
-        desc = 'Start substitution exchange with a motion (e.g., sxiw for word)',
-      })
-
-      vim.keymap.set('n', 'sxx', require('substitute.exchange').line, {
-        noremap = true,
-        silent = true,
-        desc = 'Exchange the entire current line',
-      })
-
-      vim.keymap.set('x', 'X', require('substitute.exchange').visual, {
-        noremap = true,
-        silent = true,
-        desc = 'Exchange the selected text in visual mode',
-      })
-
-      vim.keymap.set('n', 'sxc', require('substitute.exchange').cancel, {
-        noremap = true,
-        silent = true,
-        desc = 'Cancel the current substitution exchange operation',
-      })
-
-      -- Slightly advanced example of overriding default behavior and theme
-      vim.keymap.set('n', '<leader>/', function()
-        -- You can pass additional configuration to Telescope to change the theme, layout, etc.
-        builtin.current_buffer_fuzzy_find(require('telescope.themes').get_dropdown {
-          winblend = 10,
-          previewer = false,
-        })
-      end, { desc = '[/] Fuzzily search in current buffer' })
-
-      -- It's also possible to pass additional configuration options.
-      --  See `:help telescope.builtin.live_grep()` for information about particular keys
-      vim.keymap.set('n', '<leader>s/', function()
-        builtin.live_grep {
-          grep_open_files = true,
-          prompt_title = 'Live Grep in Open Files',
-        }
-      end, { desc = '[S]earch [/] in Open Files' })
-
-      -- Shortcut for searching your Neovim configuration files
-      vim.keymap.set('n', '<leader>sn', function()
-        builtin.find_files { cwd = vim.fn.stdpath 'config' }
-      end, { desc = '[S]earch [N]eovim files' })
-
-      -- Harpoon + Telescope integration
-      local harpoon = require 'harpoon'
-      harpoon:setup {}
-
-      -- Harpoon keybindings
-      vim.keymap.set('n', '<leader>ha', function()
-        harpoon:list():add()
-      end, { desc = 'Add current file to Harpoon' })
-      vim.keymap.set('n', '<leader>hd', function()
-        harpoon:list():remove()
-      end, { desc = 'Remove current file from Harpoon' })
-      vim.keymap.set('n', '<leader>hc', function()
-        harpoon:list():clear()
-      end, { desc = 'Clear Harpoon' })
-
-      -- Toggle previous & next buffers stored within Harpoon list
-      vim.keymap.set('n', '<C-S-P>', function()
-        harpoon:list():prev()
-      end, { desc = 'Previous Harpoon list' })
-      vim.keymap.set('n', '<C-S-N>', function()
-        harpoon:list():next()
-      end, { desc = 'Next Harpoon list' })
-
-      -- basic telescope configuration
-      local conf = require('telescope.config').values
-      local function toggle_telescope(harpoon_files)
-        local file_paths = {}
-        for _, item in ipairs(harpoon_files.items) do
-          table.insert(file_paths, item.value)
-        end
-
-        require('telescope.pickers')
-          .new({}, {
-            prompt_title = 'Harpoon',
-            finder = require('telescope.finders').new_table {
-              results = file_paths,
-            },
-            previewer = conf.file_previewer {},
-            sorter = conf.generic_sorter {},
-          })
-          :find()
-      end
-
-      vim.keymap.set('n', '<C-e>', function()
-        toggle_telescope(harpoon:list())
-      end, { desc = 'Open harpoon window' })
-    end,
   },
 
   -- LSP Plugins
@@ -781,227 +365,7 @@ require('lazy').setup({
       }
     end,
   },
-
-  {
-    'stevearc/oil.nvim',
-    opts = {
-      delete_to_trash = true,
-      columns = {
-        'icon',
-      },
-      use_default_keymaps = false,
-      keymaps = {
-        ['g?'] = 'actions.show_help',
-        ['<CR>'] = 'actions.select',
-        ['<C-p>'] = 'actions.preview',
-        ['q'] = 'actions.close',
-        ['<backspace>'] = 'actions.parent',
-        ['_'] = 'actions.open_cwd',
-        ['gs'] = 'actions.change_sort',
-        ['H'] = 'actions.toggle_hidden',
-        ['g\\'] = 'actions.toggle_trash',
-      },
-    },
-    cmd = { 'Oil' },
-    keys = {
-      {
-        '-',
-        '<cmd>Oil<CR>',
-        desc = 'Open Oil',
-      },
-    },
-  },
   { 'Bilal2453/luvit-meta', lazy = true },
-  {
-    'neovim/nvim-lspconfig',
-    dependencies = {
-      { 'williamboman/mason.nvim', config = true },
-      'williamboman/mason-lspconfig.nvim',
-      'WhoIsSethDaniel/mason-tool-installer.nvim',
-
-      { 'j-hui/fidget.nvim', opts = {} },
-      'hrsh7th/cmp-nvim-lsp',
-    },
-    config = function()
-      vim.api.nvim_create_autocmd('LspAttach', {
-        group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
-        callback = function(event)
-          local map = function(keys, func, desc, mode)
-            mode = mode or 'n'
-            vim.keymap.set(mode, keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
-          end
-
-          -- Jump to the definition of the word under your cursor.
-          --  This is where a variable was first declared, or where a function is defined, etc.
-          --  To jump back, press <C-t>.
-          map('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
-
-          -- Find references for the word under your cursor.
-          map('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
-          vim.keymap.set('n', 'grr', function()
-            vim.lsp.buf.references(nil, { includeDeclaration = true }, function(err, result, ctx, config)
-              if err then
-                vim.notify('Error getting references: ' .. err.message, vim.log.levels.ERROR)
-                return
-              end
-              if not result or vim.tbl_isempty(result) then
-                vim.notify('No references found', vim.log.levels.INFO)
-                return
-              end
-
-              -- Convert results to a quickfix list format
-              vim.fn.setqflist({}, ' ', {
-                title = 'LSP References',
-                items = vim.lsp.util.locations_to_items(result, 0),
-              })
-
-              vim.cmd 'copen'
-            end)
-          end, { desc = '[G]oto [R]eferences -> Quickfix' })
-
-          -- Jump to the implementation of the word under your cursor.
-          --  Useful when your language has ways of declaring types without an actual implementation.
-          map('gI', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
-
-          -- Jump to the type of the word under your cursor.
-          --  Useful when you're not sure what type a variable is and you want to see
-          --  the definition of its *type*, not where it was *defined*.
-          map('<leader>D', require('telescope.builtin').lsp_type_definitions, 'Type [D]efinition')
-
-          -- Fuzzy find all the symbols in your current document.
-          --  Symbols are things like variables, functions, types, etc.
-          map('<leader>ds', require('telescope.builtin').lsp_document_symbols, '[D]ocument [S]ymbols')
-
-          -- Fuzzy find all the symbols in your current workspace.
-          --  Similar to document symbols, except searches over your entire project.
-          map('<leader>ws', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
-
-          -- Rename the variable under your cursor.
-          map('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
-
-          map('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction', { 'n', 'x' })
-          -- Open the diagnostics list for the current buffer.
-          map('<leader>cd', vim.diagnostic.open_float, '[C]ode [D]iagnostics', { 'n', 'x' })
-
-          -- WARN: This is not Goto Definition, this is Goto Declaration.
-          --  For example, in C this would take you to the header.
-          map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
-
-          local client = vim.lsp.get_client_by_id(event.data.client_id)
-          if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight) then
-            local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
-            vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
-              buffer = event.buf,
-              group = highlight_augroup,
-              callback = vim.lsp.buf.document_highlight,
-            })
-
-            vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
-              buffer = event.buf,
-              group = highlight_augroup,
-              callback = vim.lsp.buf.clear_references,
-            })
-
-            vim.api.nvim_create_autocmd('LspDetach', {
-              group = vim.api.nvim_create_augroup('kickstart-lsp-detach', { clear = true }),
-              callback = function(event2)
-                vim.lsp.buf.clear_references()
-                vim.api.nvim_clear_autocmds { group = 'kickstart-lsp-highlight', buffer = event2.buf }
-              end,
-            })
-          end
-          if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint) then
-            map('<leader>th', function()
-              vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
-            end, '[T]oggle Inlay [H]ints')
-          end
-        end,
-      })
-      local capabilities = vim.lsp.protocol.make_client_capabilities()
-      capabilities = vim.tbl_deep_extend('force', capabilities, require('cmp_nvim_lsp').default_capabilities())
-
-      local servers = {
-
-        lua_ls = {
-          settings = {
-            Lua = {},
-          },
-        },
-      }
-
-      require('mason').setup()
-      local ensure_installed = vim.tbl_keys(servers or {})
-      vim.list_extend(ensure_installed, {
-        'stylua', -- Used to format Lua code
-      })
-      require('mason-tool-installer').setup { ensure_installed = ensure_installed }
-
-      local lspconfig = require 'lspconfig'
-
-      -- Vue
-      local mason_registry = require 'mason-registry'
-      local vue_language_server_path = mason_registry.get_package('vue-language-server'):get_install_path() .. '/node_modules/@vue/language-server'
-
-      -- Python
-      lspconfig.ruff.setup {
-        init_options = {
-          settings = {
-            -- configurationPreference = 'filesystemFirst',
-            -- fixAll = true,
-            -- organizeImports = true,
-            -- lint = {
-            --   enable = true,
-            -- },
-            lineLength = 120,
-          },
-        },
-        on_attach = function(client, bufnr)
-          vim.api.nvim_create_autocmd('BufWritePre', {
-            buffer = bufnr,
-            callback = function()
-              vim.lsp.buf.format { async = false }
-            end,
-          })
-        end,
-      }
-      require('mason-lspconfig').setup {
-        handlers = {
-          function(server_name)
-            if server_name == 'tsserver' then
-              server_name = 'ts_ls'
-            end
-            if server_name == 'emmet_ls' or server_name == 'tailwindcss' or server_name == 'htmx' then
-              return
-            end
-            local server = servers[server_name] or {}
-            server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-
-            lspconfig.ts_ls.setup {
-              capabilities = capabilities,
-              init_options = {
-                plugins = {
-                  {
-                    name = '@vue/typescript-plugin',
-                    location = vue_language_server_path,
-                    languages = { 'vue' },
-                  },
-                },
-              },
-              filetypes = { 'javascript', 'typescript', 'vue' },
-            }
-
-            -- Custom configuration for Volar (Vue Language Server)
-            if server_name == 'volar' then
-              lspconfig.volar.setup {}
-              return
-            end
-
-            require('lspconfig')[server_name].setup(server)
-          end,
-        },
-      }
-    end,
-  },
   {
     'pmizio/typescript-tools.nvim',
     dependencies = { 'nvim-lua/plenary.nvim', 'neovim/nvim-lspconfig' },
@@ -1051,6 +415,7 @@ require('lazy').setup({
         scss = { 'prettier' },
         typescript = { 'eslint_d', 'prettier' },
         vue = { 'eslint_d', 'prettier' },
+        go = { 'gofmt', 'goimports' },
       },
       hooks = {
         before_format = function(bufnr)
@@ -1086,127 +451,6 @@ require('lazy').setup({
   },
   { 'wakatime/vim-wakatime', lazy = false },
 
-  {
-    'hrsh7th/nvim-cmp',
-    event = 'InsertEnter',
-    dependencies = {
-      'hrsh7th/cmp-nvim-lsp',
-      'hrsh7th/cmp-path',
-      'hrsh7th/cmp-buffer',
-      'hrsh7th/cmp-nvim-lua',
-      'L3MON4D3/LuaSnip',
-      -- 'saadparwaiz1/cmp_luasnip',
-      'rafamadriz/friendly-snippets',
-      {
-        'zbirenbaum/copilot.lua',
-        event = 'InsertEnter',
-        opts = {
-          suggestion = {
-            enabled = true,
-            auto_trigger = false,
-          },
-          panel = {
-            enabled = false,
-          },
-        },
-        config = function(_, opts)
-          require('copilot').setup(opts)
-        end,
-      },
-      {
-        'zbirenbaum/copilot-cmp',
-        after = { 'copilot.lua' },
-        config = function()
-          require('copilot_cmp').setup()
-        end,
-      },
-    },
-    config = function()
-      local cmp = require 'cmp'
-      local luasnip = require 'luasnip'
-      --
-      -- Load snippets from friendly-snippets
-      require('luasnip.loaders.from_vscode').lazy_load()
-      --
-
-      -- Load custom LuaSnip snippets
-
-      require('luasnip.loaders.from_lua').load { paths = { vim.fn.stdpath 'config' .. '/snippets/' } }
-
-      -- Extend filetypes for LuaSnip
-      luasnip.filetype_extend('vue', { 'html', 'javascript', 'typescript' })
-      luasnip.filetype_extend('javascriptreact', { 'html', 'javascript' })
-      luasnip.filetype_extend('typescriptreact', { 'html', 'typescript' })
-
-      cmp.setup {
-        snippet = {
-          expand = function(args)
-            luasnip.lsp_expand(args.body)
-          end,
-        },
-        mapping = cmp.mapping.preset.insert {
-          ['<C-n>'] = cmp.mapping.select_next_item(),
-          ['<C-p>'] = cmp.mapping.select_prev_item(),
-          ['<C-b>'] = cmp.mapping.scroll_docs(-4),
-          ['<C-f>'] = cmp.mapping.scroll_docs(4),
-          ['<C-Space>'] = cmp.mapping.complete {},
-          ['<CR>'] = cmp.mapping(function(fallback)
-            if cmp.visible() and cmp.get_selected_entry() then
-              cmp.confirm { select = true }
-            else
-              fallback()
-            end
-          end),
-          ['<Tab>'] = cmp.mapping(function(fallback)
-            if cmp.visible() then
-              cmp.select_next_item()
-            elseif luasnip.expand_or_jumpable() then
-              luasnip.expand_or_jump()
-            else
-              fallback()
-            end
-          end, { 'i', 's' }),
-          ['<S-Tab>'] = cmp.mapping(function(fallback)
-            if cmp.visible() then
-              cmp.select_prev_item()
-            elseif luasnip.jumpable(-1) then
-              luasnip.jump(-1)
-            else
-              fallback()
-            end
-          end, { 'i', 's' }),
-        },
-        sources = cmp.config.sources {
-          { name = 'nvim_lsp', group_index = 2 },
-          { name = 'luasnip', group_index = 2 },
-          { name = 'buffer', group_index = 2 },
-          { name = 'path', group_index = 2 },
-        },
-        formatting = {
-          expandable_indicator = true,
-          fields = { 'kind', 'abbr', 'menu' },
-          format = function(entry, item)
-            local icons = {
-              copilot = '',
-              nvim_lsp = '',
-              luasnip = '',
-              buffer = '﬘',
-              path = '',
-            }
-            item.menu = icons[entry.source.name] or ''
-            return item
-          end,
-        },
-      }
-
-      -- Optional: Additional LuaSnip configuration
-      luasnip.config.set_config {
-        history = true,
-        updateevents = 'TextChanged,TextChangedI',
-      }
-    end,
-  },
-
   { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = true } },
   {
     'NeogitOrg/neogit',
@@ -1237,25 +481,21 @@ require('lazy').setup({
   },
   {
     'gbprod/substitute.nvim',
-    opts = {
-      -- your configuration comes here
-      -- or leave it empty to use the default settings
-      -- refer to the configuration section below
-    },
+    opts = {},
   },
-  {
-    'echasnovski/mini.nvim',
-    config = function()
-      require('mini.ai').setup { n_lines = 500 }
-      require('mini.surround').setup()
-      local statusline = require 'mini.statusline'
-      statusline.setup { use_icons = vim.g.have_nerd_font }
-      ---@diagnostic disable-next-line: duplicate-set-field
-      statusline.section_location = function()
-        return '%2l:%-2v'
-      end
-    end,
-  },
+  -- {
+  --   'echasnovski/mini.nvim',
+  --   config = function()
+  --     require('mini.ai').setup { n_lines = 500 }
+  --     require('mini.surround').setup()
+  --     local statusline = require 'mini.statusline'
+  --     statusline.setup { use_icons = vim.g.have_nerd_font }
+  --     ---@diagnostic disable-next-line: duplicate-set-field
+  --     statusline.section_location = function()
+  --       return '%2l:%-2v'
+  --     end
+  --   end,
+  -- },
   {
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
@@ -1289,14 +529,16 @@ require('lazy').setup({
 })
 
 vim.cmd [[colorscheme monoglow-lack]]
+
 vim.cmd [[
   highlight Normal guibg=#000000 guifg=#ffffff
   highlight NonText guibg=#000000 guifg=#505050
 ]]
+
 vim.o.termguicolors = true
 vim.o.background = 'dark'
+--
 -- Squiggly line
--- Red, wavy underline for errors
 vim.cmd [[highlight DiagnosticUnderlineError gui=undercurl guisp=#FF0000]]
 
 -- Orange, wavy underline for warnings and unnecessary
@@ -1308,11 +550,16 @@ vim.cmd [[highlight DiagnosticUnderlineInfo gui=undercurl guisp=#0000FF]]
 
 -- Gray, wavy underline for hints
 vim.cmd [[highlight DiagnosticUnderlineHint gui=undercurl guisp=#808080]]
+
 -- tiny-inline-diagnostic
 vim.diagnostic.config {
   severity_sort = false,
   signs = true,
-  underline = true,
+  underline = {
+    severity = {
+      min = vim.diagnostic.severity.HINT,
+    },
+  },
   update_in_insert = false,
   virtual_text = false,
 }
