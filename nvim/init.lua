@@ -129,6 +129,7 @@ require('lazy').setup({
     'lewis6991/gitsigns.nvim',
     config = function()
       require('gitsigns').setup {
+        current_line_blame = true,
         signs = {
           add = { text = '+' },
           change = { text = '~' },
@@ -146,92 +147,17 @@ require('lazy').setup({
     end,
   },
   {
-    'nvim-neo-tree/neo-tree.nvim',
-    branch = 'v3.x',
-    dependencies = {
-      'nvim-lua/plenary.nvim',
-      'nvim-tree/nvim-web-devicons',
-      'MunifTanjim/nui.nvim',
-    },
-    config = function()
-      vim.fn.sign_define('DiagnosticSignError', { text = ' ', texthl = 'DiagnosticSignError' })
-      vim.fn.sign_define('DiagnosticSignWarn', { text = ' ', texthl = 'DiagnosticSignWarn' })
-      vim.fn.sign_define('DiagnosticSignInfo', { text = ' ', texthl = 'DiagnosticSignInfo' })
-      vim.fn.sign_define('DiagnosticSignHint', { text = '󰌵', texthl = 'DiagnosticSignHint' })
-
-      require('neo-tree').setup {
-        enable_diagnostics = true,
-        default_component_configs = {
-          icon = {
-            folder_closed = '',
-            folder_open = '',
-            folder_empty = '󰜌',
-            error = '',
-            warning = '',
-          },
-          diagnostics = {
-            symbols = {
-              hint = '󰌵',
-              info = '',
-              warn = '',
-              error = '',
-            },
-            -- Highlight groups for different diagnostic levels
-            highlights = {
-              hint = 'DiagnosticHint',
-              info = 'DiagnosticInfo',
-              warn = 'DiagnosticWarn',
-              error = 'DiagnosticError',
-            },
-          },
-          name = {
-            trailing_slash = false,
-            use_git_status_colors = true,
-            highlight = 'NeoTreeFileName',
-          },
-
-          git_status = {
-            symbols = {
-              added = '✚', -- or "✚", but this is redundant info if you use git_status_colors on the name
-              modified = '', -- or "", but this is redundant info if you use git_status_colors on the name
-              deleted = '✖', -- this can only be used in the git_status source
-              renamed = '󰁕', -- this can only be used in the git_status source
-              -- Status type
-              untracked = '',
-              ignored = '',
-              unstaged = '󰄱',
-              staged = '',
-              conflict = '',
-            },
-          },
-        },
-        filesystem = {
-          filtered_items = {
-            visible = true,
-            hide_dotfiles = true,
-            hide_gitignored = false,
-            never_show_by_pattern = {
-              '.git',
-              '.DS_Store',
-              'thumbs.db',
-              'desktop.ini',
-              '__pycache__',
-              '.vscode',
-            },
-          },
-          follow_current_file = {
-            enabled = true,
-            leave_dirs_open = false,
-          },
-          hijack_netrw_behavior = 'open_default',
-        },
-      }
-      vim.keymap.set('n', '<leader>e', '<cmd>Neotree toggle<CR>', { desc = 'Toggle Neotree' })
-    end,
-  },
-  {
     'folke/which-key.nvim',
-    event = 'VimEnter', -- Sets the loading event to 'VimEnter'
+    event = 'VeryLazy',
+    keys = {
+      {
+        '<leader>?',
+        function()
+          require('which-key').show { global = false }
+        end,
+        desc = 'Buffer Local Keymaps (which-key)',
+      },
+    },
     opts = {
       icons = {
         -- set icon mappings to true if you have a Nerd Font
@@ -334,19 +260,10 @@ require('lazy').setup({
           show_source = true,
           throttle = 0,
           multiple_diag_under_cursor = true,
-          -- use_icons_from_diagnostic = true,
         },
       }
     end,
   },
-  {
-    'wnkz/monoglow.nvim',
-    lazy = false,
-    priority = 1000,
-    opts = {},
-  },
-
-  -- LSP Plugins
   {
     'folke/lazydev.nvim',
     ft = 'lua',
@@ -379,55 +296,6 @@ require('lazy').setup({
     },
   },
   {
-    'stevearc/conform.nvim',
-    event = { 'BufWritePre' },
-    cmd = { 'ConformInfo' },
-    keys = {
-      {
-        '<leader>f',
-        function()
-          require('conform').format { async = true }
-        end,
-        mode = '',
-        desc = '[F]ormat buffer',
-      },
-    },
-    opts = {
-      notify_on_error = true,
-      format_on_save = function(bufnr)
-        local disable_filetypes = { c = true, cpp = true }
-        local lsp_format_opt
-        if disable_filetypes[vim.bo[bufnr].filetype] then
-          lsp_format_opt = 'never'
-        else
-          lsp_format_opt = 'fallback'
-        end
-        return {
-          timeout_ms = 500,
-          lsp_format = lsp_format_opt,
-        }
-      end,
-      formatters_by_ft = {
-        javascript = { 'eslint_d', 'prettier' },
-        json = { 'prettier' },
-        lua = { 'stylua' },
-        python = { 'ruff_fix', 'ruff_format', 'ruff_organize_imports' },
-        scss = { 'prettier' },
-        typescript = { 'eslint_d', 'prettier' },
-        vue = { 'eslint_d', 'prettier' },
-        go = { 'gofmt', 'goimports' },
-      },
-      hooks = {
-        before_format = function(bufnr)
-          vim.b.saved_view = vim.fn.winsaveview()
-        end,
-        after_format = function(bufnr)
-          vim.fn.winrestview(vim.b.saved_view)
-        end,
-      },
-    },
-  },
-  {
     'NvChad/nvim-colorizer.lua',
     event = 'BufReadPre',
     opts = { -- set to setup table
@@ -443,7 +311,6 @@ require('lazy').setup({
         vue = { 'eslint_d' },
       }
 
-      -- Automatically lint when files are saved
       vim.cmd [[
       autocmd BufWritePost <buffer> lua require('lint').try_lint()
     ]]
@@ -460,8 +327,6 @@ require('lazy').setup({
 
       -- Only one of these is needed.
       'nvim-telescope/telescope.nvim', -- optional
-      'ibhagwan/fzf-lua', -- optional
-      'echasnovski/mini.pick', -- optional
     },
     config = true,
   },
@@ -480,32 +345,34 @@ require('lazy').setup({
     },
   },
   {
-    'gbprod/substitute.nvim',
-    opts = {},
-  },
-  -- {
-  --   'echasnovski/mini.nvim',
-  --   config = function()
-  --     require('mini.ai').setup { n_lines = 500 }
-  --     require('mini.surround').setup()
-  --     local statusline = require 'mini.statusline'
-  --     statusline.setup { use_icons = vim.g.have_nerd_font }
-  --     ---@diagnostic disable-next-line: duplicate-set-field
-  --     statusline.section_location = function()
-  --       return '%2l:%-2v'
-  --     end
-  --   end,
-  -- },
-  {
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
     main = 'nvim-treesitter.configs',
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'json' },
+      ensure_installed = {
+        'bash',
+        'c',
+        'diff',
+        'go',
+        'html',
+        'json',
+        'lua',
+        'luadoc',
+        'markdown',
+        'markdown_inline',
+        'python',
+        'query',
+        'scss',
+        'typescript',
+        'vim',
+        'vimdoc',
+        'vue',
+      },
       auto_install = true,
       highlight = {
         enable = true,
       },
+      indent = { enable = true },
     },
   },
 }, {
@@ -528,15 +395,14 @@ require('lazy').setup({
   },
 })
 
-vim.cmd [[colorscheme monoglow-lack]]
-
-vim.cmd [[
-  highlight Normal guibg=#000000 guifg=#ffffff
-  highlight NonText guibg=#000000 guifg=#505050
-]]
-
-vim.o.termguicolors = true
-vim.o.background = 'dark'
+-- vim.cmd [[colorscheme monoglow-lack]]
+-- vim.cmd [[
+--   highlight Normal guibg=#000000 guifg=#ffffff
+--   highlight NonText guibg=#000000 guifg=#505050
+-- ]]
+--
+-- vim.o.termguicolors = true
+-- vim.o.background = 'dark'
 --
 -- Squiggly line
 vim.cmd [[highlight DiagnosticUnderlineError gui=undercurl guisp=#FF0000]]
@@ -551,15 +417,10 @@ vim.cmd [[highlight DiagnosticUnderlineInfo gui=undercurl guisp=#0000FF]]
 -- Gray, wavy underline for hints
 vim.cmd [[highlight DiagnosticUnderlineHint gui=undercurl guisp=#808080]]
 
--- tiny-inline-diagnostic
 vim.diagnostic.config {
-  severity_sort = false,
+  severity_sort = true,
   signs = true,
-  underline = {
-    severity = {
-      min = vim.diagnostic.severity.HINT,
-    },
-  },
+  underline = true,
   update_in_insert = false,
   virtual_text = false,
 }

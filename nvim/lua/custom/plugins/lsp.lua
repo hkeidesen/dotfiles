@@ -5,15 +5,173 @@ return {
       { 'williamboman/mason.nvim', config = true },
       'williamboman/mason-lspconfig.nvim',
       'WhoIsSethDaniel/mason-tool-installer.nvim',
-
       { 'j-hui/fidget.nvim', opts = {} },
-      -- Replaced `cmp-nvim-lsp` with blink.cmp
       'saghen/blink.cmp',
     },
     config = function()
-      -------------------------------------------------------------------------
-      -- 0) Create the autocmd for LSP keymaps
-      -------------------------------------------------------------------------
+      local lspconfig = require 'lspconfig'
+
+      local ensure_installed = {
+        'ts_ls',
+        'volar',
+        'pyright',
+        'ruff',
+        'pylsp',
+        'gopls',
+        'eslint',
+      }
+
+      require('mason').setup()
+      require('mason-tool-installer').setup {
+        ensure_installed = ensure_installed,
+      }
+      require('mason-lspconfig').setup {
+        ensure_installed = ensure_installed,
+        automatic_installation = {},
+        handlers = {
+          function(server_name)
+            if server_name == 'tsserver' then
+              server_name = 'ts_ls'
+            end
+            if server_name == 'emmet_ls' or server_name == 'tailwindcss' or server_name == 'htmx' then
+              return
+            end
+
+            local server = {}
+
+            -- ✅ Ensure Blink.cmp is initialized before using
+            local ok, blink_cmp = pcall(require, 'blink.cmp')
+            if ok then
+              server.capabilities = blink_cmp.get_lsp_capabilities(server.capabilities or {})
+            end
+
+            -- ✅ Vue-Specific Configuration
+            if server_name == 'ts_ls' or server_name == 'volar' then
+              local mason_registry = require 'mason-registry'
+              local vue_package = mason_registry.get_package 'vue-language-server'
+              local vue_language_server_path = vue_package and vue_package:get_install_path() .. '/node_modules/@vue/language-server' or ''
+
+              if server_name == 'ts_ls' then
+                lspconfig.ts_ls.setup {
+                  capabilities = server.capabilities,
+                  init_options = {
+                    plugins = {
+                      { name = '@vue/typescript-plugin', location = vue_language_server_path, languages = { 'vue' } },
+                    },
+                  },
+                  filetypes = { 'javascript', 'typescript', 'javascriptreact', 'typescriptreact', 'vue' },
+                }
+                return
+              end
+
+              if server_name == 'volar' then
+                lspconfig.volar.setup {
+                  capabilities = server.capabilities,
+                  init_options = {
+                    typescript = {
+                      tsdk = vim.fn.stdpath 'data' .. '/mason/packages/typescript-language-server/node_modules/typescript/lib',
+                    },
+                  },
+                }
+                return
+              end
+            end
+
+            -- ✅ Python Configuration
+            if server_name == 'pyright' then
+              lspconfig.pyright.setup {
+                capabilities = server.capabilities,
+                settings = {
+                  python = {
+                    analysis = {
+                      autoImportCompletions = true,
+                      typeCheckingMode = 'basic', -- Pyright should ONLY do type checking
+                      useLibraryCodeForTypes = true,
+                      diagnosticMode = 'openFilesOnly', -- Avoid analyzing entire workspace
+                    },
+                  },
+                },
+              }
+              return
+            end
+
+            if server_name == 'ruff' then
+              lspconfig.ruff.setup {
+                capabilities = server.capabilities,
+                init_options = { settings = { lineLength = 120 } },
+              }
+              return
+            end
+
+            -- ✅ Python (pylsp + Rope for Extract Method)
+            if server_name == 'pylsp' then
+              lspconfig.pylsp.setup {
+                capabilities = server.capabilities,
+                settings = {
+                  pylsp = {
+                    plugins = {
+                      -- ✅ Disable pylsp's built-in linters (since Ruff handles it)
+                      pylint = { enabled = false },
+                      pyflakes = { enabled = false },
+                      pycodestyle = { enabled = false },
+
+                      -- ✅ Keep Rope for refactoring (Extract Method)
+                      rope_autoimport = { enabled = true },
+                      rope_completion = { enabled = true },
+                      rope_rename = { enabled = true },
+                      rope_refactoring = { enabled = true },
+                    },
+                  },
+                },
+              }
+              return
+            end
+
+            -- ✅ Go Configuration
+            if server_name == 'gopls' then
+              lspconfig.gopls.setup {
+                capabilities = server.capabilities,
+                settings = {
+                  gopls = {
+                    completeUnimported = true,
+                    usePlaceholders = true,
+                    analyses = {
+                      unusedparams = true,
+                      shadow = true,
+                    },
+                    staticcheck = true,
+                  },
+                },
+              }
+              return
+            end
+
+            -- Eslint
+            lspconfig.eslint.setup {
+              filetypes = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact', 'vue' },
+            }
+
+            -- Typos
+            lspconfig.typos_lsp.setup {
+              -- cmd_env = { RUST_LOG = 'error' },
+              init_options = {
+                -- Custom config. Used together with a config file found in the workspace or its parents,
+                -- taking precedence for settings declared in both.
+                -- Equivalent to the typos `--config` cli argument.
+                config = '~/code/typos-lsp/crates/typos-lsp/tests/typos.toml',
+                -- How typos are rendered in the editor, can be one of an Error, Warning, Info or Hint.
+                -- Defaults to error.
+                diagnosticSeverity = 'Error',
+              },
+            }
+
+            -- ✅ Default LSP setup
+            lspconfig[server_name].setup(server)
+          end,
+        },
+      }
+
+      -- ✅ LSP Attach Mappings & Autocommands
       vim.api.nvim_create_autocmd('LspAttach', {
         group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
         callback = function(event)
@@ -22,143 +180,50 @@ return {
             vim.keymap.set(mode, keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
           end
 
-          -- Jump to definition
           map('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
-          -- Find references
           map('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
-          -- Implementations
           map('gI', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
-          -- Type definitions
           map('<leader>D', require('telescope.builtin').lsp_type_definitions, 'Type [D]efinition')
-          -- Document symbols
           map('<leader>ds', require('telescope.builtin').lsp_document_symbols, '[D]ocument [S]ymbols')
-          -- Workspace symbols
           map('<leader>ws', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
-          -- Rename
           map('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
-          -- Code actions
           map('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction', { 'n', 'x' })
-          -- Diagnostics
           map('<leader>cd', vim.diagnostic.open_float, '[C]ode [D]iagnostics', { 'n', 'x' })
-          -- Goto declaration
           map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
 
-          -- Example toggling inlay hints if server supports them
+          -- ✅ LSP Highlights
           local client = vim.lsp.get_client_by_id(event.data.client_id)
-          if client and client.supports_method 'textDocument/inlayHint' then
+          if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight) then
+            local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
+            vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
+              buffer = event.buf,
+              group = highlight_augroup,
+              callback = vim.lsp.buf.document_highlight,
+            })
+
+            vim.api.nvim_create_autocmd({ 'CursorMoved', 'CursorMovedI' }, {
+              buffer = event.buf,
+              group = highlight_augroup,
+              callback = vim.lsp.buf.clear_references,
+            })
+
+            vim.api.nvim_create_autocmd('LspDetach', {
+              group = vim.api.nvim_create_augroup('kickstart-lsp-detach', { clear = true }),
+              callback = function(event2)
+                vim.lsp.buf.clear_references()
+                vim.api.nvim_clear_autocmds { group = 'kickstart-lsp-highlight', buffer = event2.buf }
+              end,
+            })
+          end
+
+          -- ✅ Inlay Hints Toggle
+          if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint) then
             map('<leader>th', function()
-              vim.lsp.inlay_hint(event.buf, nil) -- toggles the inlay hints
+              vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
             end, '[T]oggle Inlay [H]ints')
           end
         end,
       })
-
-      local capabilities = require('blink.cmp').get_lsp_capabilities()
-
-      local servers = {
-        lua_ls = {
-          settings = {
-            Lua = {
-              diagnostics = { globals = { 'vim' } },
-            },
-          },
-        },
-        gopls = {
-          settings = {
-            gopls = {
-              completeUnimported = true,
-              usePlaceholders = true,
-              analyses = {
-                unusedparams = true,
-                shadow = true,
-              },
-              staticcheck = true,
-            },
-          },
-          on_attach = function(_, bufnr)
-            vim.diagnostic.enable(bufnr)
-
-            vim.api.nvim_create_autocmd('BufWritePre', {
-              buffer = bufnr,
-              callback = function()
-                vim.lsp.buf.format { async = false }
-              end,
-            })
-          end,
-        },
-      }
-
-      require('mason').setup()
-      local ensure_installed = vim.tbl_keys(servers)
-      vim.list_extend(ensure_installed, {
-        'stylua', -- Example: stylua for formatting lua code
-      })
-      require('mason-tool-installer').setup {
-        ensure_installed = ensure_installed,
-      }
-
-      local lspconfig = require 'lspconfig'
-      local mason_registry = require 'mason-registry'
-      local vue_language_server_path = mason_registry.get_package('vue-language-server'):get_install_path() .. '/node_modules/@vue/language-server'
-
-      -- Example config: ruff for Python
-      lspconfig.ruff.setup {
-        init_options = { settings = { lineLength = 120 } },
-        on_attach = function(_, bufnr)
-          vim.api.nvim_create_autocmd('BufWritePre', {
-            buffer = bufnr,
-            callback = function()
-              vim.lsp.buf.format { async = false }
-            end,
-          })
-        end,
-      }
-
-      require('mason-lspconfig').setup {
-        handlers = {
-          function(server_name)
-            -- rename tsserver to ts_ls
-            if server_name == 'tsserver' then
-              server_name = 'ts_ls'
-            end
-
-            -- skip certain servers I don't want
-            if server_name == 'emmet_ls' or server_name == 'tailwindcss' or server_name == 'htmx' then
-              return
-            end
-
-            local server = servers[server_name] or {}
-            server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-
-            if server_name == 'ts_ls' then
-              lspconfig.ts_ls.setup {
-                capabilities = server.capabilities,
-                init_options = {
-                  plugins = {
-                    {
-                      name = '@vue/typescript-plugin',
-                      location = vue_language_server_path,
-                      languages = { 'vue' },
-                    },
-                  },
-                },
-                filetypes = { 'javascript', 'typescript', 'vue' },
-              }
-              return
-            end
-
-            -- If it's Volar (Vue Language Server)
-            if server_name == 'volar' then
-              lspconfig.volar.setup {
-                capabilities = server.capabilities,
-              }
-              return
-            end
-
-            lspconfig[server_name].setup(server)
-          end,
-        },
-      }
     end,
   },
 }

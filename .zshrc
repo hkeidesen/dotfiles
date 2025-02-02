@@ -9,6 +9,9 @@ fi
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 
+# Go air
+alias air='/Users/hk/go/bin/air'
+
 # Path to your Oh My Zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
 # UTF-8
@@ -123,6 +126,7 @@ alias backend='z /Users/hk/Projects/mlink-monorepo/backend/mlink'
 if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
   tmux attach-session -t default || tmux new-session -s default
 fi
+export TMUX_PROGRAM=$(which tmux)
 
 # avoid duplicates..
 export HISTCONTROL=ignoredups:erasedups
@@ -151,7 +155,7 @@ export GOOGLE_APPLICATION_CREDENTIALS="/Users/hk/Projects/mlink-monorepo/backend
 if [ -f '/Users/hk/google-cloud-sdk/path.zsh.inc' ]; then
     source '/Users/hk/google-cloud-sdk/path.zsh.inc'
 fi
-
+export PATH=$HOME/go/bin:$PATH
 
 # functions
 code() {

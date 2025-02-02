@@ -4,7 +4,8 @@ return {
     opts = {
       delete_to_trash = true,
       columns = {
-        'icon',
+        'icon', -- Default column
+        'gitsigns', -- Add gitsigns column
       },
       use_default_keymaps = false,
       keymaps = {
@@ -27,5 +28,20 @@ return {
         desc = 'Open Oil',
       },
     },
+  },
+  {
+    'lewis6991/gitsigns.nvim',
+    opts = {
+      signs = {
+        add = { text = '+' },
+        change = { text = '~' },
+        delete = { text = '_' },
+        topdelete = { text = '‾' },
+        changedelete = { text = '~' },
+      },
+    },
+    config = function(_, opts)
+      require('gitsigns').setup(opts)
+    end,
   },
 }
