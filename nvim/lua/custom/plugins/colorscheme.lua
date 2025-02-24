@@ -11,10 +11,27 @@
 --   },
 -- }
 --
+-- return {
+--   'timmypidashev/darkbox.nvim',
+--   lazy = false,
+--   config = function()
+--     require('darkbox').load()
+--   end,
+-- }
 return {
-  'timmypidashev/darkbox.nvim',
-  lazy = false,
+  'rose-pine/neovim',
+  name = 'rose-pine',
   config = function()
-    require('darkbox').load()
+    require('rose-pine').setup {
+      -- Override the builtin palette per variant
+      -- moon = {
+      --     overlay = '#363738',
+      -- },
+      highlight_groups = {
+        Comment = { fg = 'foam' },
+        VertSplit = { fg = 'muted', bg = 'muted' },
+      },
+    }
+    vim.cmd 'colorscheme rose-pine'
   end,
 }

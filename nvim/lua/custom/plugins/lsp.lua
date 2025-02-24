@@ -33,9 +33,6 @@ return {
             if server_name == 'tsserver' then
               server_name = 'ts_ls'
             end
-            if server_name == 'emmet_ls' or server_name == 'tailwindcss' or server_name == 'htmx' then
-              return
-            end
 
             local server = {}
 
@@ -65,14 +62,7 @@ return {
               end
 
               if server_name == 'volar' then
-                lspconfig.volar.setup {
-                  capabilities = server.capabilities,
-                  init_options = {
-                    typescript = {
-                      tsdk = vim.fn.stdpath 'data' .. '/mason/packages/typescript-language-server/node_modules/typescript/lib',
-                    },
-                  },
-                }
+                lspconfig.volar.setup {}
                 return
               end
             end
@@ -80,17 +70,17 @@ return {
             -- ✅ Python Configuration
             if server_name == 'pyright' then
               lspconfig.pyright.setup {
-                capabilities = server.capabilities,
-                settings = {
-                  python = {
-                    analysis = {
-                      autoImportCompletions = true,
-                      typeCheckingMode = 'basic', -- Pyright should ONLY do type checking
-                      useLibraryCodeForTypes = true,
-                      diagnosticMode = 'openFilesOnly', -- Avoid analyzing entire workspace
-                    },
-                  },
-                },
+                -- capabilities = server.capabilities,
+                -- settings = {
+                --   python = {
+                --     analysis = {
+                --       autoImportCompletions = true,
+                --       typeCheckingMode = 'basic', -- Pyright should ONLY do type checking
+                --       useLibraryCodeForTypes = true,
+                --       diagnosticMode = 'openFilesOnly', -- Avoid analyzing entire workspace
+                --     },
+                --   },
+                -- },
               }
               return
             end
@@ -105,25 +95,25 @@ return {
 
             -- ✅ Python (pylsp + Rope for Extract Method)
             if server_name == 'pylsp' then
-              lspconfig.pylsp.setup {
-                capabilities = server.capabilities,
-                settings = {
-                  pylsp = {
-                    plugins = {
-                      -- ✅ Disable pylsp's built-in linters (since Ruff handles it)
-                      pylint = { enabled = false },
-                      pyflakes = { enabled = false },
-                      pycodestyle = { enabled = false },
-
-                      -- ✅ Keep Rope for refactoring (Extract Method)
-                      rope_autoimport = { enabled = true },
-                      rope_completion = { enabled = true },
-                      rope_rename = { enabled = true },
-                      rope_refactoring = { enabled = true },
-                    },
-                  },
-                },
-              }
+              -- lspconfig.pylsp.setup {
+              -- capabilities = server.capabilities,
+              -- settings = {
+              --   pylsp = {
+              --     plugins = {
+              --       -- ✅ Disable pylsp's built-in linters (since Ruff handles it)
+              --       pylint = { enabled = false },
+              --       pyflakes = { enabled = false },
+              --       pycodestyle = { enabled = false },
+              --
+              --       -- ✅ Keep Rope for refactoring (Extract Method)
+              --       rope_autoimport = { enabled = true },
+              --       rope_completion = { enabled = true },
+              --       rope_rename = { enabled = true },
+              --       rope_refactoring = { enabled = true },
+              --     },
+              --   },
+              -- },
+              -- }
               return
             end
 

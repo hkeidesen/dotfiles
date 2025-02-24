@@ -18,6 +18,9 @@ vim.opt.breakindent = true
 -- Save undo history
 vim.opt.undofile = true
 
+-- -- statusline with go test results
+-- vim.o.statusline = "%f %y %m %r %= %{get(g:,'go_test_status','')} %p%% %l:%c"
+
 -- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
@@ -45,6 +48,37 @@ vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
 -- Cycle keymaps
 vim.keymap.set('n', '<leader>cn', '<cmd>cnext<CR>', { noremap = true, silent = true, desc = 'Cycle next' })
 vim.keymap.set('n', '<leader>cp', '<cmd>cprev<CR>', { noremap = true, silent = true, desc = 'Cycle previous' })
+
+-- Put the current relative file path into clipboard
+vim.keymap.set('n', '<leader>y', "<cmd>:let @+ = expand('%')<CR>", { noremap = true, silent = true, desc = 'Will put the path of the buffer to the clipboard' })
+
+-- Open TODO in telescope
+vim.keymap.set('n', '<leader>td', '<cmd>TodoTelescope<CR>', { noremap = true, silent = true, desc = 'Open TODOs in telescope' })
+
+-- Open TODOs in QuickFix list
+vim.keymap.set('n', '<leader>tq', '<cmd>TodoQuickFix<CR>', { noremap = true, silent = true, desc = 'Open all TODS in the project in the quickfix list' })
+
+vim.keymap.set('n', '<leader>tn', function()
+  -- Toggle line numbers
+  vim.wo.number = not vim.wo.number
+  vim.wo.relativenumber = not vim.wo.relativenumber
+
+  -- Toggle indentation guides (if `ibl` is loaded)
+  local ok, ibl = pcall(require, 'ibl')
+  if ok then
+    local current_enabled = ibl.config.indent.char ~= ''
+    ibl.setup { indent = { char = current_enabled and '' or '▏' } }
+  end
+end, { desc = 'Toggle number/relativenumber and indent guides' })
+
+-- Center screen on C-d and C-u
+vim.keymap.set('n', '<C-d>', '<C-d>zz')
+vim.keymap.set('n', '<C-u>', '<C-u>zz')
+vim.keymap.set('n', '<C-f>', '<C-d>zz')
+vim.keymap.set('n', '<C-b>', '<C-d>zz')
+
+--Close all buffers but keep current
+vim.keymap.set('n', '<leader>o', ':%bd|e#', { noremap = true, silent = true, desc = 'Close all buffers but keep current' })
 
 -- Preview substitutions live, as you type!
 vim.opt.inccommand = 'split'

@@ -7,10 +7,25 @@ return {
       {
         '<leader>f',
         function()
-          require('conform').format { async = false }
+          local mode = vim.fn.mode()
+          if mode == 'v' then
+            -- Get selected range
+            local start_pos = vim.fn.getpos "'<"
+            local end_pos = vim.fn.getpos "'>"
+            require('conform').format {
+              async = false,
+              range = {
+                start = { start_pos[2], start_pos[3] },
+                ['end'] = { end_pos[2], end_pos[3] },
+              },
+            }
+          else
+            -- Format entire buffer
+            require('conform').format { async = false }
+          end
         end,
-        mode = '',
-        desc = '[F]ormat buffer',
+        mode = { 'n', 'v' }, -- Apply to both normal and visual mode
+        desc = '[F]ormat buffer or selection',
       },
     },
     opts = {

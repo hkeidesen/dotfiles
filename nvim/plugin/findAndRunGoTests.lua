@@ -50,15 +50,9 @@ local function run_relevant_go_test()
   end
 
   vim.schedule(function()
-    require('lualine').refresh() -- 🔥 Refresh Lualine to reflect changes
+    require('lualine').refresh()
   end)
 end
-
--- Auto-run relevant tests on save
-vim.api.nvim_create_autocmd('BufWritePost', {
-  pattern = '*.go',
-  callback = run_relevant_go_test,
-})
 
 -- Auto-run relevant tests on save
 vim.api.nvim_create_autocmd('BufWritePost', {

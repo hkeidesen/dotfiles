@@ -33,6 +33,7 @@ return {
         -- For major updates, this must be adjusted manually.
         version = '^1.0.0',
       },
+      { 'nvim-telescope/telescope-symbols.nvim' },
     },
     config = function()
       local actions = require 'telescope.actions'
@@ -62,6 +63,7 @@ return {
       pcall(require('telescope').load_extension, 'fzf')
       pcall(require('telescope').load_extension, 'ui-select')
       pcall(require('telescope').load_extension, 'live_grep_args')
+      pcall(require('telescope').load_extension, 'symbols')
 
       local builtin = require 'telescope.builtin'
       vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
@@ -74,6 +76,10 @@ return {
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
+      vim.keymap.set('n', '<leader>sy', builtin.lsp_document_symbols, { desc = '[S]earch [Y]mbols' })
+      vim.keymap.set('n', '<leader>sS', builtin.lsp_workspace_symbols, { desc = '[S]earch [S]ymbols (workspace)' })
+      vim.keymap.set('n', '<leader>sm', builtin.marks, { desc = '[S]earch [M]arks' })
+      -- TODO: Flytt disse til init.lua
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
       vim.keymap.set('n', '<leader>bb', '<cmd>b#<CR>', { desc = 'Switch to the last buffer' })
       vim.keymap.set('n', '<leader>bd', '<cmd>:bd<CR>', { desc = 'Buffer delete' })

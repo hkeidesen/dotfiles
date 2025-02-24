@@ -190,3 +190,11 @@ source ~/.nvm/nvm.sh
 # bindkey '^R' fzf-history-widget
 
 . "$HOME/.local/bin/env"
+
+# Auto-start or attach to an existing tmux session
+if [[ -z "$TMUX" ]] && [[ $SSH_TTY ]]; then
+    tmux attach -t default || tmux new -s default
+fi
+
+
+alias pbpush="pbpaste | ssh hk@datadragon 'tmux load-buffer -'"
