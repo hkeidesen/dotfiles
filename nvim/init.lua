@@ -45,6 +45,10 @@ vim.opt.splitbelow = true
 vim.opt.list = true
 vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
 
+-- reselects the text of the last edit
+vim.keymap.set('n', 'gV', '`[v`]', { noremap = true, silent = true, desc = 'Visually select the last changed or inserted text' })
+vim.keymap.set('x', 'g/', '<Esc>/\\%V', { noremap = true, silent = true, desc = 'Allows searching in visual selection' })
+
 -- Cycle keymaps
 vim.keymap.set('n', '<leader>cn', '<cmd>cnext<CR>', { noremap = true, silent = true, desc = 'Cycle next' })
 vim.keymap.set('n', '<leader>cp', '<cmd>cprev<CR>', { noremap = true, silent = true, desc = 'Cycle previous' })
