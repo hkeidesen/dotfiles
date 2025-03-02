@@ -13,15 +13,17 @@ return {
           'filename',
           {
             function()
-              return vim.g.go_test_status ~= '' and vim.g.go_test_status or ''
+              return vim.g.go_test_status or '⌛ Running tests...' -- Always display status
             end,
             color = function()
-              if vim.g.go_test_status and vim.g.go_test_status:match 'failed' then
-                return { fg = '#ff5555' } -- Red for failures
-              elseif vim.g.go_test_status and vim.g.go_test_status:match 'passed' then
-                return { fg = '#55ff55' } -- Green for passed tests
+              if vim.g.go_test_status and vim.g.go_test_status:match '🔥' then
+                return { fg = '#ff5555' } -- Red for failed tests
+              elseif vim.g.go_test_status and vim.g.go_test_status:match '✅' then
+                return { fg = '#55ff55' } -- Green for passing tests
+              elseif vim.g.go_test_status and vim.g.go_test_status:match '⠋' then
+                return { fg = '#ffaa00' } -- Orange for running tests (spinner)
               else
-                return { fg = '#aaaaaa' } -- Gray for no data
+                return { fg = '#aaaaaa' } -- Gray for unknown state
               end
             end,
           },
@@ -29,10 +31,11 @@ return {
       },
     }
 
+    -- Reset test status when entering a Go file
     vim.api.nvim_create_autocmd('BufEnter', {
       pattern = '*.go',
       callback = function()
-        vim.g.go_test_status = ''
+        vim.g.go_test_status = '⌛ Waiting for tests...'
         if package.loaded['lualine'] then
           require('lualine').refresh()
         end

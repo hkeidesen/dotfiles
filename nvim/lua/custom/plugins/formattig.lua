@@ -32,28 +32,42 @@ return {
       notify_on_error = true,
       format_on_save = function(bufnr)
         local disable_filetypes = { c = true, cpp = true }
+        local biome_filetypes = {
+          javascript = true,
+          javascriptreact = true,
+          typescript = true,
+          typescriptreact = true,
+          json = true,
+          jsonc = true,
+          vue = true,
+        }
+
         local lsp_format_opt
         if disable_filetypes[vim.bo[bufnr].filetype] then
           lsp_format_opt = 'never'
+        elseif biome_filetypes[vim.bo[bufnr].filetype] then
+          lsp_format_opt = 'always' -- Always use Conform for Biome-supported files
         else
           lsp_format_opt = 'fallback'
         end
+
         return {
           timeout_ms = 500,
           lsp_format = lsp_format_opt,
         }
       end,
       formatters_by_ft = {
-        javascript = { 'eslint_d', 'prettier' },
-        javascriptreact = { 'eslint_d', 'prettier' },
-        json = { 'prettier' },
+        javascript = { 'biome' },
+        javascriptreact = { 'biome' },
+        typescript = { 'biome' },
+        typescriptreact = { 'biome' },
+        json = { 'biome' },
+        jsonc = { 'biome' },
+        vue = { 'biome' },
         lua = { 'stylua' },
         python = { 'ruff_fix', 'ruff_format', 'ruff_organize_imports' },
         scss = { 'prettier' },
         css = { 'prettier', 'stylelint' },
-        typescript = { 'eslint_d', 'prettier' },
-        typescriptreact = { 'eslint_d', 'prettier' },
-        vue = { 'eslint_d', 'prettier' },
         go = { 'gofumpt', 'goimports', 'golines' },
       },
       hooks = {

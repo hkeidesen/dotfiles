@@ -42,12 +42,15 @@ return {
               server.capabilities = blink_cmp.get_lsp_capabilities(server.capabilities or {})
             end
 
-            -- ✅ Vue-Specific Configuration
             if server_name == 'ts_ls' or server_name == 'volar' then
               local mason_registry = require 'mason-registry'
               local vue_package = mason_registry.get_package 'vue-language-server'
               local vue_language_server_path = vue_package and vue_package:get_install_path() .. '/node_modules/@vue/language-server' or ''
-
+              lspconfig.volar.setup {
+                on_attach = function(client)
+                  client.server_capabilities.documentFormattingProvider = false
+                end,
+              }
               if server_name == 'ts_ls' then
                 lspconfig.ts_ls.setup {
                   capabilities = server.capabilities,
@@ -57,32 +60,24 @@ return {
                     },
                   },
                   filetypes = { 'javascript', 'typescript', 'javascriptreact', 'typescriptreact', 'vue' },
+                  on_attach = function(client)
+                    client.server_capabilities.documentFormattingProvider = false
+                  end,
                 }
                 return
               end
-
-              if server_name == 'volar' then
-                lspconfig.volar.setup {}
-                return
-              end
             end
-
-            -- ✅ Python Configuration
-            if server_name == 'pyright' then
-              lspconfig.pyright.setup {
-                -- capabilities = server.capabilities,
-                -- settings = {
-                --   python = {
-                --     analysis = {
-                --       autoImportCompletions = true,
-                --       typeCheckingMode = 'basic', -- Pyright should ONLY do type checking
-                --       useLibraryCodeForTypes = true,
-                --       diagnosticMode = 'openFilesOnly', -- Avoid analyzing entire workspace
-                --     },
-                --   },
-                -- },
+            if server_name == 'biome' then
+              lspconfig.biome.setup {
+                filetypes = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact', 'json', 'jsonc', 'vue' },
+                root_dir = function(fname)
+                  return require('lspconfig.util').root_pattern('biome.json', 'package.json', '.git')(fname) or vim.fn.getcwd() -- Fallback to current working directory
+                end,
+                on_attach = function(client, bufnr)
+                  client.server_capabilities.documentFormattingProvider = true
+                  client.server_capabilities.documentRangeFormattingProvider = true
+                end,
               }
-              return
             end
 
             if server_name == 'ruff' then
@@ -137,8 +132,11 @@ return {
             end
 
             -- Eslint
+
             lspconfig.eslint.setup {
-              filetypes = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact', 'vue' },
+              on_attach = function(client)
+                client.server_capabilities.documentFormattingProvider = false
+              end,
             }
 
             -- Typos

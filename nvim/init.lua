@@ -45,6 +45,20 @@ vim.opt.splitbelow = true
 vim.opt.list = true
 vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
 
+-- --biome format on save
+-- vim.api.nvim_create_autocmd('BufWritePre', {
+--   pattern = { '*.js', '*.ts', '*.tsx', '*.jsx', '*.json', '*.jsonc' },
+--   callback = function(ctx)
+--     vim.lsp.buf.format {
+--       bufnr = ctx.buf,
+--       async = false,
+--       filter = function(client)
+--         return client.name == 'biome'
+--       end,
+--     }
+--   end,
+-- })
+
 -- reselects the text of the last edit
 vim.keymap.set('n', 'gV', '`[v`]', { noremap = true, silent = true, desc = 'Visually select the last changed or inserted text' })
 vim.keymap.set('x', 'g/', '<Esc>/\\%V', { noremap = true, silent = true, desc = 'Allows searching in visual selection' })
@@ -411,7 +425,27 @@ require('lazy').setup({
         enable = true,
       },
       indent = { enable = true },
+      textobjects = {
+        select = {
+          enable = true,
+          lookahead = true,
+          keymaps = {
+
+            -- select functions
+            ['af'] = '@function.outer',
+            ['if'] = '@function.inner',
+
+            -- select classes
+            ['ac'] = '@class.outer',
+            ['ic'] = '@class.inner',
+          },
+        },
+      },
     },
+  },
+  {
+    'nvim-treesitter/nvim-treesitter-textobjects',
+    dependencies = { 'nvim-treesitter' },
   },
 }, {
   ui = {
