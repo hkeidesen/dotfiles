@@ -22,11 +22,6 @@ return {
     },
     cmd = 'Trouble',
     keys = {
-      -- {
-      --   '<leader>xx',
-      --   '<cmd>Trouble diagnostics toggle<cr>',
-      --   desc = 'Diagnostics (Trouble)',
-      -- },
       {
         '<leader>xx',
         '<cmd>Trouble diagnostics toggle filter.buf=0<cr>',
@@ -51,6 +46,20 @@ return {
         '<leader>xQ',
         '<cmd>Trouble qflist toggle<cr>',
         desc = 'Quickfix List (Trouble)',
+      },
+      {
+        '<leader>tn',
+        function()
+          require('trouble').next { skip_groups = true, jump = true }
+        end,
+        desc = 'Trouble: Next item',
+      },
+      {
+        '<leader>tp',
+        function()
+          require('trouble').previous { skip_groups = true, jump = true }
+        end,
+        desc = 'Trouble: Previous item',
       },
     },
   },

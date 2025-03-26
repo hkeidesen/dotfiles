@@ -1,6 +1,11 @@
 return {
   {
     'stevearc/oil.nvim',
+    lazy = false, -- Ensure Oil loads at startup
+    dependencies = {
+      'FerretDetective/oil-git-signs.nvim', -- Add oil-git-signs as a dependency
+      'lewis6991/gitsigns.nvim', -- Ensure gitsigns is loaded
+    },
     opts = {
       delete_to_trash = true,
       columns = {

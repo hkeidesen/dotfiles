@@ -4,11 +4,13 @@ return {
     -- until you open an oil buffer
     'FerretDetective/oil-git-signs.nvim',
     ft = 'oil',
+    ---@module "oil_git_signs"
+    ---@type oil_git_signs.Config
     opts = {},
   },
   {
     'stevearc/oil.nvim',
-    ---@module 'oil'
+    ---@module "oil"
     ---@type oil.SetupOpts
     opts = {
       win_options = {

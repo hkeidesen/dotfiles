@@ -1,3 +1,4 @@
+-- Conform config
 return {
   {
     'stevearc/conform.nvim',
@@ -9,7 +10,6 @@ return {
         function()
           local mode = vim.fn.mode()
           if mode == 'v' then
-            -- Get selected range
             local start_pos = vim.fn.getpos "'<"
             local end_pos = vim.fn.getpos "'>"
             require('conform').format {
@@ -20,11 +20,10 @@ return {
               },
             }
           else
-            -- Format entire buffer
             require('conform').format { async = false }
           end
         end,
-        mode = { 'n', 'v' }, -- Apply to both normal and visual mode
+        mode = { 'n', 'v' },
         desc = '[F]ormat buffer or selection',
       },
     },
@@ -32,6 +31,7 @@ return {
       notify_on_error = true,
       format_on_save = function(bufnr)
         local disable_filetypes = { c = true, cpp = true }
+        -- Remove vue from the biome_filetypes so that vue uses our formatter chain instead of LSP formatting
         local biome_filetypes = {
           javascript = true,
           javascriptreact = true,
@@ -39,14 +39,14 @@ return {
           typescriptreact = true,
           json = true,
           jsonc = true,
-          vue = true,
+          -- vue = true,  -- removed vue here!
         }
 
         local lsp_format_opt
         if disable_filetypes[vim.bo[bufnr].filetype] then
           lsp_format_opt = 'never'
         elseif biome_filetypes[vim.bo[bufnr].filetype] then
-          lsp_format_opt = 'always' -- Always use Conform for Biome-supported files
+          lsp_format_opt = 'always'
         else
           lsp_format_opt = 'fallback'
         end
@@ -63,7 +63,7 @@ return {
         typescriptreact = { 'biome' },
         json = { 'biome' },
         jsonc = { 'biome' },
-        vue = { 'biome' },
+        vue = { 'prettier' },
         lua = { 'stylua' },
         python = { 'ruff_fix', 'ruff_format', 'ruff_organize_imports' },
         scss = { 'prettier' },

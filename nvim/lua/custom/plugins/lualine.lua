@@ -13,9 +13,16 @@ return {
           'filename',
           {
             function()
-              return vim.g.go_test_status or '⌛ Running tests...' -- Always display status
+              -- Only show Go test status for Go files
+              if vim.bo.filetype ~= 'go' then
+                return ''
+              end
+              return vim.g.go_test_status or '⌛ Running tests...'
             end,
             color = function()
+              if vim.bo.filetype ~= 'go' then
+                return {} -- No color for non-Go files
+              end
               if vim.g.go_test_status and vim.g.go_test_status:match '🔥' then
                 return { fg = '#ff5555' } -- Red for failed tests
               elseif vim.g.go_test_status and vim.g.go_test_status:match '✅' then

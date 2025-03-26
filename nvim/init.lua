@@ -5,6 +5,7 @@ vim.g.have_nerd_font = true
 vim.opt.number = true
 vim.opt.relativenumber = true
 vim.opt.mouse = 'a'
+vim.opt.paste = false
 
 vim.opt.showmode = false
 
@@ -44,20 +45,6 @@ vim.opt.splitbelow = true
 --  and `:help 'listchars'`
 vim.opt.list = true
 vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
-
--- --biome format on save
--- vim.api.nvim_create_autocmd('BufWritePre', {
---   pattern = { '*.js', '*.ts', '*.tsx', '*.jsx', '*.json', '*.jsonc' },
---   callback = function(ctx)
---     vim.lsp.buf.format {
---       bufnr = ctx.buf,
---       async = false,
---       filter = function(client)
---         return client.name == 'biome'
---       end,
---     }
---   end,
--- })
 
 -- reselects the text of the last edit
 vim.keymap.set('n', 'gV', '`[v`]', { noremap = true, silent = true, desc = 'Visually select the last changed or inserted text' })
@@ -118,6 +105,60 @@ vim.keymap.set('n', 'yae', 'ggVGy', { noremap = true, silent = true, desc = 'Yan
 vim.keymap.set('n', 'cae', 'ggVG"_c', { noremap = true, silent = true, desc = 'Change entire file' })
 vim.keymap.set('n', 'vae', 'ggVG', { noremap = true, silent = true, desc = 'Select entire file' })
 
+vim.api.nvim_create_autocmd('BufWritePost', {
+  callback = function()
+    local qf = vim.fn.getqflist()
+    if not qf or #qf == 0 then
+      return
+    end -- No need to update an empty qflist
+
+    for i, item in ipairs(qf) do
+      if item.bufnr and vim.api.nvim_buf_is_loaded(item.bufnr) then
+        local lines = vim.api.nvim_buf_get_lines(item.bufnr, item.lnum - 1, item.lnum, false)
+        if lines[1] then
+          qf[i].text = lines[1] -- Update quickfix entry
+        end
+      end
+    end
+    vim.fn.setqflist(qf, 'r') -- Replace quickfix list with updated results
+  end,
+})
+
+local function yank_after_colon()
+  local line = vim.fn.getline '.'
+  local text = string.match(line, ':%s*([^,]+)')
+  if text then
+    vim.fn.setreg('"', text)
+    print('Yanked: ' .. text)
+  else
+    print 'No match found'
+  end
+end
+
+vim.keymap.set('n', 'ya:', yank_after_colon, { desc = "Yank text after ':' until the first comma" })
+
+local function select_after_colon()
+  -- Get the current line number and text.
+  local lnum = vim.fn.line '.'
+  local line = vim.fn.getline '.'
+
+  local colon_start, colon_end = string.find(line, ':%s*')
+  if colon_start then
+    local start_col = colon_end + 1
+    local comma_start = string.find(line, ',', start_col)
+    local end_col = comma_start and (comma_start - 1) or #line
+
+    vim.fn.setpos("'<", { 0, lnum, start_col, 0 })
+    vim.fn.setpos("'>", { 0, lnum, end_col, 0 })
+    -- Reselect the visual area.
+    vim.cmd 'normal! gv'
+  else
+    print 'No colon found on this line'
+  end
+end
+
+-- Map the function to "va:" in normal mode.
+vim.keymap.set('n', 'va:', select_after_colon, { desc = "Visually select text after ':' until the first comma" })
 -- Diagnostic keymaps
 vim.keymap.set('n', '<C-q>', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
 
@@ -157,6 +198,11 @@ vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right win
 vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 
+vim.keymap.set('n', '<C-w><', ':vertical resize -10<CR>', { silent = true })
+vim.keymap.set('n', '<C-w>>', ':vertical resize +10<CR>', { silent = true })
+vim.keymap.set('n', '<C-w>-', ':resize -5<CR>', { silent = true })
+vim.keymap.set('n', '<C-w>+', ':resize +5<CR>', { silent = true })
+
 vim.api.nvim_create_autocmd('TextYankPost', {
   desc = 'Highlight when yanking (copying) text',
   group = vim.api.nvim_create_augroup('kickstart-highlight-yank', { clear = true }),
@@ -173,6 +219,14 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
   end
 end ---@diagnostic disable-next-line: undefined-field
 vim.opt.rtp:prepend(lazypath)
+
+local function toggle_diffview(cmd)
+  if next(require('diffview.lib').views) == nil then
+    vim.cmd(cmd)
+  else
+    vim.cmd 'DiffviewClose'
+  end
+end
 
 require('lazy').setup({
   { import = 'custom/plugins' },
@@ -375,9 +429,20 @@ require('lazy').setup({
     'NeogitOrg/neogit',
     dependencies = {
       'nvim-lua/plenary.nvim', -- required
-      'sindrets/diffview.nvim', -- optional - Diff integration
-
-      -- Only one of these is needed.
+      {
+        'sindrets/diffview.nvim',
+        config = function()
+          vim.keymap.set('n', '<leader>gd', function()
+            toggle_diffview 'DiffviewOpen'
+          end, { desc = 'Diff Index' })
+          vim.keymap.set('n', '<leader>gD', function()
+            toggle_diffview 'DiffviewOpen master..HEAD'
+          end, { desc = 'Diff master' })
+          vim.keymap.set('n', '<leader>gf', function()
+            toggle_diffview 'DiffviewFileHistory %'
+          end, { desc = 'Open diffs for current File' })
+        end,
+      },
       'nvim-telescope/telescope.nvim', -- optional
     },
     config = true,
@@ -467,14 +532,10 @@ require('lazy').setup({
   },
 })
 
--- vim.cmd [[colorscheme monoglow-lack]]
--- vim.cmd [[
---   highlight Normal guibg=#000000 guifg=#ffffff
---   highlight NonText guibg=#000000 guifg=#505050
--- ]]
---
--- vim.o.termguicolors = true
--- vim.o.background = 'dark'
+vim.cmd [[
+  highlight DiffviewNormal guibg=#1e1e2e
+  highlight DiffviewCursorLine guibg=#313244
+]]
 --
 -- Squiggly line
 vim.cmd [[highlight DiagnosticUnderlineError gui=undercurl guisp=#FF0000]]

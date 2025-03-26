@@ -19,6 +19,7 @@ return {
         'pylsp',
         'gopls',
         'eslint',
+        'biome',
       }
 
       require('mason').setup()
@@ -30,27 +31,34 @@ return {
         automatic_installation = {},
         handlers = {
           function(server_name)
+            -- If server_name is "tsserver", we rename it to "ts_ls" so we can handle it specially
             if server_name == 'tsserver' then
               server_name = 'ts_ls'
             end
 
+            -- Base server config table
             local server = {}
 
-            -- ✅ Ensure Blink.cmp is initialized before using
+            -- If using a custom cmp extension (like blink.cmp) for LSP capabilities
             local ok, blink_cmp = pcall(require, 'blink.cmp')
             if ok then
               server.capabilities = blink_cmp.get_lsp_capabilities(server.capabilities or {})
             end
 
+            -- Handle Vue + TypeScript (Volar, ts_ls) setup
             if server_name == 'ts_ls' or server_name == 'volar' then
               local mason_registry = require 'mason-registry'
               local vue_package = mason_registry.get_package 'vue-language-server'
-              local vue_language_server_path = vue_package and vue_package:get_install_path() .. '/node_modules/@vue/language-server' or ''
+              local vue_language_server_path = vue_package and (vue_package:get_install_path() .. '/node_modules/@vue/language-server') or ''
+
+              -- Setup Volar
               lspconfig.volar.setup {
                 on_attach = function(client)
                   client.server_capabilities.documentFormattingProvider = false
                 end,
               }
+
+              -- Setup ts_ls
               if server_name == 'ts_ls' then
                 lspconfig.ts_ls.setup {
                   capabilities = server.capabilities,
@@ -67,19 +75,28 @@ return {
                 return
               end
             end
+
+            -- Biome setup
             if server_name == 'biome' then
               lspconfig.biome.setup {
                 filetypes = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact', 'json', 'jsonc', 'vue' },
                 root_dir = function(fname)
-                  return require('lspconfig.util').root_pattern('biome.json', 'package.json', '.git')(fname) or vim.fn.getcwd() -- Fallback to current working directory
+                  return require('lspconfig.util').root_pattern('biome.json', 'package.json', '.git')(fname) or vim.fn.getcwd()
                 end,
                 on_attach = function(client, bufnr)
-                  client.server_capabilities.documentFormattingProvider = true
-                  client.server_capabilities.documentRangeFormattingProvider = true
+                  if vim.bo[bufnr].filetype == 'vue' then
+                    -- Disable Biome formatting for Vue so Prettier (via Conform) can take over
+                    client.server_capabilities.documentFormattingProvider = false
+                    client.server_capabilities.documentRangeFormattingProvider = false
+                  else
+                    client.server_capabilities.documentFormattingProvider = true
+                    client.server_capabilities.documentRangeFormattingProvider = true
+                  end
                 end,
               }
             end
 
+            -- Ruff setup
             if server_name == 'ruff' then
               lspconfig.ruff.setup {
                 capabilities = server.capabilities,
@@ -88,31 +105,23 @@ return {
               return
             end
 
-            -- ✅ Python (pylsp + Rope for Extract Method)
+            -- If we detect pylsp, skip it here (maybe you configure it elsewhere)
             if server_name == 'pylsp' then
-              -- lspconfig.pylsp.setup {
-              -- capabilities = server.capabilities,
-              -- settings = {
-              --   pylsp = {
-              --     plugins = {
-              --       -- ✅ Disable pylsp's built-in linters (since Ruff handles it)
-              --       pylint = { enabled = false },
-              --       pyflakes = { enabled = false },
-              --       pycodestyle = { enabled = false },
-              --
-              --       -- ✅ Keep Rope for refactoring (Extract Method)
-              --       rope_autoimport = { enabled = true },
-              --       rope_completion = { enabled = true },
-              --       rope_rename = { enabled = true },
-              --       rope_refactoring = { enabled = true },
-              --     },
-              --   },
-              -- },
-              -- }
               return
             end
 
-            -- ✅ Go Configuration
+            -- Pyright: attach autoImportCompletions to server.settings
+            if server_name == 'pyright' then
+              server.settings = {
+                python = {
+                  analysis = {
+                    autoImportCompletions = true,
+                  },
+                },
+              }
+            end
+
+            -- Gopls setup
             if server_name == 'gopls' then
               lspconfig.gopls.setup {
                 capabilities = server.capabilities,
@@ -131,35 +140,27 @@ return {
               return
             end
 
-            -- Eslint
-
+            -- Eslint setup
             lspconfig.eslint.setup {
               on_attach = function(client)
                 client.server_capabilities.documentFormattingProvider = false
               end,
             }
 
-            -- Typos
+            -- Typos LSP setup
             lspconfig.typos_lsp.setup {
-              -- cmd_env = { RUST_LOG = 'error' },
               init_options = {
-                -- Custom config. Used together with a config file found in the workspace or its parents,
-                -- taking precedence for settings declared in both.
-                -- Equivalent to the typos `--config` cli argument.
                 config = '~/code/typos-lsp/crates/typos-lsp/tests/typos.toml',
-                -- How typos are rendered in the editor, can be one of an Error, Warning, Info or Hint.
-                -- Defaults to error.
                 diagnosticSeverity = 'Error',
               },
             }
 
-            -- ✅ Default LSP setup
+            -- For all other servers, use the default setup with our custom `server` table
             lspconfig[server_name].setup(server)
           end,
         },
       }
 
-      -- ✅ LSP Attach Mappings & Autocommands
       vim.api.nvim_create_autocmd('LspAttach', {
         group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
         callback = function(event)
@@ -167,8 +168,30 @@ return {
             mode = mode or 'n'
             vim.keymap.set(mode, keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
           end
+          local builtin = require 'telescope.builtin'
+          local actions = require 'telescope.actions'
+          local action_state = require 'telescope.actions.state'
+
+          local function lsp_definitions_split()
+            builtin.lsp_definitions {
+              attach_mappings = function(prompt_bufnr, map)
+                local open_in_vsplit = function()
+                  local selection = action_state.get_selected_entry()
+                  actions.close(prompt_bufnr)
+                  if selection then
+                    -- Use vim.lsp.util.jump_to_location with the "vsplit" argument.
+                    vim.lsp.util.jump_to_location(selection.value, 'vsplit')
+                  end
+                end
+                map('i', '<CR>', open_in_vsplit)
+                map('n', '<CR>', open_in_vsplit)
+                return true
+              end,
+            }
+          end
 
           map('gd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
+          map('gs', lsp_definitions_split, '[G]oto [S]plit Definition')
           map('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
           map('gI', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
           map('<leader>D', require('telescope.builtin').lsp_type_definitions, 'Type [D]efinition')
@@ -179,7 +202,6 @@ return {
           map('<leader>cd', vim.diagnostic.open_float, '[C]ode [D]iagnostics', { 'n', 'x' })
           map('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
 
-          -- ✅ LSP Highlights
           local client = vim.lsp.get_client_by_id(event.data.client_id)
           if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight) then
             local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
@@ -204,7 +226,6 @@ return {
             })
           end
 
-          -- ✅ Inlay Hints Toggle
           if client and client.supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint) then
             map('<leader>th', function()
               vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
