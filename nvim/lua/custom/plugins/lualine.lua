@@ -10,7 +10,8 @@ return {
       },
       sections = {
         lualine_c = {
-          'filename',
+          -- show path relative to cwd
+          { 'filename', path = 1 },
           {
             function()
               -- Only show Go test status for Go files

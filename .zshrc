@@ -9,6 +9,12 @@ fi
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 
+
+
+export TERM="xterm-kitty"
+export COLORTERM=truecolor
+
+
 # Go air
 alias air='/Users/hk/go/bin/air'
 
@@ -22,6 +28,8 @@ export LC_ALL=en_US.UTF-8
 # to know which specific one was loaded, run: echo $RANDOM_THEME
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
 ZSH_THEME="powerlevel10k/powerlevel10k"
+
+typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet
 
 # Set list of themes to pick from when loading at random
 # Setting this variable when ZSH_THEME=random will cause zsh to load
@@ -94,12 +102,6 @@ source $ZSH/oh-my-zsh.sh
 # You may need to manually set your language environment
 # export LANG=en_US.UTF-8
 
-# Preferred editor for local and remote sessions
- if [[ -n $SSH_CONNECTION ]]; then
-   export EDITOR='nvim'
- else
-   export EDITOR='nvim'
- fi
 
 # Compilation flags
 # export ARCHFLAGS="-arch x86_64"
@@ -122,14 +124,14 @@ source $ZSH/oh-my-zsh.sh
 alias mv4='z /Users/hk/Projects/mlink-vue3-frontend'
 alias backend='z /Users/hk/Projects/mlink-monorepo/backend/mlink'
 
-# Start tmux automatically if not already inside a tmux session
-if command -v tmux &> /dev/null && [ -z "$TMUX" ]; then
-  tmux attach-session -t default || tmux new-session -s default
+if command -v tmux &> /dev/null && [ -z "$TMUX" ] && [[ $SSH_TTY ]]; then
+  tmux attach -t default || tmux new -s default
 fi
 export TMUX_PROGRAM=$(which tmux)
 
-# avoid duplicates..
-export HISTCONTROL=ignoredups:erasedups
+export HISTFILE=~/.zsh-history-sync/.zsh_history_shared
+export HISTSIZE=10000
+export SAVEHIST=10000
 
 # append history entries..
 # setopt -s histappend
@@ -137,18 +139,15 @@ export HISTCONTROL=ignoredups:erasedups
 # After each command, save and reload history
 export PROMPT_COMMAND="history -a; history -c; history -r; $PROMPT_COMMAND"
 setopt inc_append_history  # Write to history immediately
-# setopt share_history       # Share history across sessions
-# setopt hist_ignore_dups    # Ignore duplicated commands in history
+setopt share_history       # Share history across sessions
+setopt hist_ignore_dups    # Ignore duplicated commands in history
 # setopt hist_ignore_space   # Ignore commands that start with space
-# setopt hist_reduce_blanks  # Remove superfluous blanks before storing in history
+setopt hist_reduce_blanks  # Remove superfluous blanks before storing in history
 # setopt hist_verify         # Don't execute immediately upon history expansion
 
 # Set paths
 export PATH=/opt/homebrew/bin:$PATH
 export GCLOUD_CONFIG_PATH="$HOME/.config/gcloud"
-
-#Cloud proxy
-export GOOGLE_APPLICATION_CREDENTIALS="/Users/hk/Projects/mlink-monorepo/backend/mlink/mlink-test-3be1cb689e17.json"
 
 
 # The next line updates PATH for the Google Cloud SDK.
@@ -164,9 +163,8 @@ code() {
 
 alias inv='nvim $(fzf -m --preview="bat --color=always {}")'
 
-export EDITOR='nvim'
 export VISUAL='nvim'
-
+EDITOR='nvim'
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
 export PIPENV_PYTHON="$PYENV_ROOT/shims/python"
@@ -178,7 +176,7 @@ plugin=(
 eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 source ~/.nvm/nvm.sh
-. "$HOME/.cargo/env" 
+[[ -f "$HOME/.local/bin/env" ]] && . "$HOME/.local/bin/env"
 
 # Bind Ctrl-r to fzf history search
 # fzf-history-widget() {
@@ -198,3 +196,4 @@ fi
 
 
 alias pbpush="pbpaste | ssh hk@datadragon 'tmux load-buffer -'"
+(( ! ${+functions[p10k]} )) || p10k finalize

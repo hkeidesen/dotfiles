@@ -1,16 +1,17 @@
 return {
   {
     'stevearc/oil.nvim',
-    lazy = false, -- Ensure Oil loads at startup
+    lazy = false,
     dependencies = {
-      'FerretDetective/oil-git-signs.nvim', -- Add oil-git-signs as a dependency
-      'lewis6991/gitsigns.nvim', -- Ensure gitsigns is loaded
+      'FerretDetective/oil-git-signs.nvim',
+      'lewis6991/gitsigns.nvim',
     },
     opts = {
+      default_file_explorer = true,
       delete_to_trash = true,
       columns = {
-        'icon', -- Default column
-        'gitsigns', -- Add gitsigns column
+        'icon',
+        'gitsigns',
       },
       use_default_keymaps = false,
       keymaps = {
@@ -23,6 +24,9 @@ return {
         ['gs'] = 'actions.change_sort',
         ['H'] = 'actions.toggle_hidden',
         ['g\\'] = 'actions.toggle_trash',
+      },
+      view_options = {
+        show_hidden = true,
       },
     },
     cmd = { 'Oil' },

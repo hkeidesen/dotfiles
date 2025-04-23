@@ -355,21 +355,21 @@ require('lazy').setup({
       },
     },
   },
-  {
-    'rachartier/tiny-inline-diagnostic.nvim',
-    event = 'VeryLazy', -- Or `LspAttach`
-    priority = 1000, -- needs to be loaded in first
-    config = function()
-      require('tiny-inline-diagnostic').setup {
-        preset = 'classic',
-        options = {
-          show_source = true,
-          throttle = 0,
-          multiple_diag_under_cursor = true,
-        },
-      }
-    end,
-  },
+  -- {
+  --   'rachartier/tiny-inline-diagnostic.nvim',
+  --   event = 'VeryLazy', -- Or `LspAttach`
+  --   priority = 1000, -- needs to be loaded in first
+  --   config = function()
+  --     require('tiny-inline-diagnostic').setup {
+  --       preset = 'classic',
+  --       options = {
+  --         show_source = true,
+  --         throttle = 0,
+  --         multiple_diag_under_cursor = true,
+  --       },
+  --     }
+  --   end,
+  -- },
   {
     'folke/lazydev.nvim',
     ft = 'lua',
@@ -407,21 +407,21 @@ require('lazy').setup({
     opts = { -- set to setup table
     },
   },
-  {
-    'mfussenegger/nvim-lint',
-    config = function()
-      -- Configuration for nvim-lint
-      require('lint').linters_by_ft = {
-        javascript = { 'eslint_d' },
-        typescript = { 'eslint_d' },
-        vue = { 'eslint_d' },
-      }
-
-      vim.cmd [[
-      autocmd BufWritePost <buffer> lua require('lint').try_lint()
-    ]]
-    end,
-  },
+  -- {
+  --   'mfussenegger/nvim-lint',
+  --   config = function()
+  --     -- Configuration for nvim-lint
+  --     require('lint').linters_by_ft = {
+  --       javascript = { 'eslint_d' },
+  --       typescript = { 'eslint_d' },
+  --       vue = { 'eslint_d' },
+  --     }
+  --
+  --     vim.cmd [[
+  --     autocmd BufWritePost <buffer> lua require('lint').try_lint()
+  --   ]]
+  --   end,
+  -- },
   { 'wakatime/vim-wakatime', lazy = false },
 
   { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = true } },
@@ -550,10 +550,37 @@ vim.cmd [[highlight DiagnosticUnderlineInfo gui=undercurl guisp=#0000FF]]
 -- Gray, wavy underline for hints
 vim.cmd [[highlight DiagnosticUnderlineHint gui=undercurl guisp=#808080]]
 
-vim.diagnostic.config {
-  severity_sort = true,
-  signs = true,
+local minimal_diagnostics = {
+  virtual_text = {
+    current_line = true,
+  },
+  virtual_lines = false,
   underline = true,
   update_in_insert = false,
-  virtual_text = false,
 }
+
+local detailed_diagnostics = {
+  virtual_text = {
+    current_line = true,
+    severity = {
+      max = vim.diagnostic.severity.WARN,
+    },
+  },
+  virtual_lines = {
+    current_line = true,
+    severity = {
+      min = vim.diagnostic.severity.ERROR,
+    },
+  },
+  underline = true,
+  update_in_insert = false,
+}
+
+vim.diagnostic.config(detailed_diagnostics)
+
+local is_minimal = false
+vim.keymap.set('n', 'gK', function()
+  is_minimal = not is_minimal
+  vim.diagnostic.config(is_minimal and minimal_diagnostics or detailed_diagnostics)
+  print(is_minimal and 'Diagnostics: minimal view' or 'Diagnostics: detailed view')
+end, { desc = 'Toggle diagnostic virtual_lines' })

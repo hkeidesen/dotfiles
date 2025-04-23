@@ -31,7 +31,7 @@ return {
       notify_on_error = true,
       format_on_save = function(bufnr)
         local disable_filetypes = { c = true, cpp = true }
-        -- Remove vue from the biome_filetypes so that vue uses our formatter chain instead of LSP formatting
+        local ft = vim.bo[bufnr].filetype
         local biome_filetypes = {
           javascript = true,
           javascriptreact = true,
@@ -41,7 +41,6 @@ return {
           jsonc = true,
           -- vue = true,  -- removed vue here!
         }
-
         local lsp_format_opt
         if disable_filetypes[vim.bo[bufnr].filetype] then
           lsp_format_opt = 'never'
@@ -50,7 +49,9 @@ return {
         else
           lsp_format_opt = 'fallback'
         end
-
+        if ft == 'javascriptreact' or ft == 'typescriptreact' then
+          lsp_format_opt = 'never'
+        end
         return {
           timeout_ms = 500,
           lsp_format = lsp_format_opt,

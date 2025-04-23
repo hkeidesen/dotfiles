@@ -12,13 +12,13 @@ return {
       local lspconfig = require 'lspconfig'
 
       local ensure_installed = {
-        'ts_ls',
+        -- 'ts_ls',
         'volar',
         'pyright',
         'ruff',
         'pylsp',
         'gopls',
-        'eslint',
+        -- 'eslint',
         'biome',
       }
 
@@ -67,7 +67,7 @@ return {
                       { name = '@vue/typescript-plugin', location = vue_language_server_path, languages = { 'vue' } },
                     },
                   },
-                  filetypes = { 'javascript', 'typescript', 'javascriptreact', 'typescriptreact', 'vue' },
+                  filetypes = { 'javascript', 'typescript', 'vue' },
                   on_attach = function(client)
                     client.server_capabilities.documentFormattingProvider = false
                   end,
@@ -142,18 +142,29 @@ return {
 
             -- Eslint setup
             lspconfig.eslint.setup {
-              on_attach = function(client)
+              on_attach = function(client, bufnr)
+                local ft = vim.bo[bufnr].filetype
+                if ft == 'javascriptreact' or ft == 'typescriptreact' then
+                  client.stop() -- Stop ESLint for React files
+                  return
+                end
                 client.server_capabilities.documentFormattingProvider = false
               end,
             }
 
             -- Typos LSP setup
-            lspconfig.typos_lsp.setup {
-              init_options = {
-                config = '~/code/typos-lsp/crates/typos-lsp/tests/typos.toml',
-                diagnosticSeverity = 'Error',
-              },
-            }
+            if server_name == 'typos_lsp' then
+              lspconfig.typos_lsp.setup {
+                root_dir = function(fname)
+                  return require('lspconfig.util').root_pattern('.git', 'package.json')(fname) or vim.fn.getcwd()
+                end,
+                init_options = {
+                  config = '~/code/typos-lsp/crates/typos-lsp/tests/typos.toml',
+                  diagnosticSeverity = 'Error',
+                },
+              }
+              return
+            end
 
             -- For all other servers, use the default setup with our custom `server` table
             lspconfig[server_name].setup(server)
@@ -179,8 +190,7 @@ return {
                   local selection = action_state.get_selected_entry()
                   actions.close(prompt_bufnr)
                   if selection then
-                    -- Use vim.lsp.util.jump_to_location with the "vsplit" argument.
-                    vim.lsp.util.jump_to_location(selection.value, 'vsplit')
+                    vim.lsp.util.show_document(selection.value)
                   end
                 end
                 map('i', '<CR>', open_in_vsplit)
