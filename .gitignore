@@ -1,0 +1,12 @@
+# GitHub Copilot (OAuth tokens etc.)
+.config/github-copilot/
+
+
+# Auth & secrets
+.ssh/
+.gnupg/
+.wakatime.cfg
+.zsh_history
+.npmrc
+.config/gh/hosts.yml
+.config/1Password/
