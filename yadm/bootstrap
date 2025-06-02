@@ -1,0 +1,36 @@
+#!/bin/bash
+
+echo "🔧 Running yadm bootstrap..."
+
+# Homebrew install
+if ! command -v brew &>/dev/null; then
+  echo "🍺 Installing Homebrew..."
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+else
+  echo "✅ Homebrew already installed"
+fi
+
+# Homebrew bundle
+if [ -f "$HOME/Brewfile" ]; then
+  echo "📦 Installing from Brewfile..."
+  brew bundle --file="$HOME/Brewfile"
+fi
+
+# Fonts (nerd fonts etc)
+echo "🧠 Installing Nerd Fonts..."
+brew tap homebrew/cask-fonts
+brew install --cask font-jetbrains-mono-nerd-font
+
+# Neovim plugin sync
+if [ -x "$(command -v nvim)" ]; then
+  echo "✨ Syncing Neovim plugins..."
+  nvim --headless "+Lazy! sync" +qa
+fi
+
+# Set zsh as default shell
+if [ "$SHELL" != "/bin/zsh" ]; then
+  echo "💻 Changing default shell to zsh..."
+  chsh -s /bin/zsh
+fi
+
+echo "✅ Bootstrap complete"

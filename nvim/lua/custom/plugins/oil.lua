@@ -1,0 +1,74 @@
+return {
+  -- {
+  --   "stevearc/oil.nvim",
+  --   lazy = false,
+  --   dependencies = {
+  --     "FerretDetective/oil-git-signs.nvim",
+  --     "lewis6991/gitsigns.nvim",
+  --   },
+  --   opts = {
+  --     default_file_explorer = true,
+  --     delete_to_trash = true,
+  --     columns = { "icon", "gitsigns" },
+  --     use_default_keymaps = false,
+  --     keymaps = {
+  --       ["g?"] = "actions.show_help",
+  --       ["<CR>"] = "actions.select",
+  --       ["<C-p>"] = "actions.preview",
+  --       ["q"] = "actions.close",
+  --       ["<backspace>"] = "actions.parent",
+  --       ["_"] = "actions.open_cwd",
+  --       ["gs"] = "actions.change_sort",
+  --       ["H"] = "actions.toggle_hidden",
+  --       ["g\\"] = "actions.toggle_trash",
+  --     },
+  --     view_options = {
+  --       show_hidden = true,
+  --       highlight_filename = function(entry)
+  --         local util = require("oil.util")
+  --         local signs = require("oil-git-signs")
+  --         local git = require("oil-git-signs.git")
+
+  --         -- figure out cwd from the oil buffer’s URL
+  --         local bufname = vim.api.nvim_buf_get_name(0)
+  --         local _, cwd = util.parse_url(bufname)
+  --         local repo = git.get_root(cwd)
+
+  --         -- returns e.g. { index = "M", working_tree = " " }
+  --         local st = git.get_status(repo, entry.name)
+  --         if not st then
+  --           return nil
+  --         end
+
+  --         -- choose index-state (or st.working_tree if you prefer)
+  --         local code = st.index
+
+  --         -- lookup the matching highlight group from the plugin defaults
+  --         local info = signs.defaults.index[code]
+  --         return info and info.hl_group or nil
+  --       end,
+  --       -- ─────────────────────────────────────────────────────────────
+  --     },
+  --   },
+  --   cmd = { "Oil" },
+  --   keys = {
+  --     { "-", "<cmd>Oil<CR>", desc = "Open Oil" },
+  --   },
+  -- },
+
+  -- {
+  --   "lewis6991/gitsigns.nvim",
+  --   opts = {
+  --     signs = {
+  --       add = { text = "+" },
+  --       change = { text = "~" },
+  --       delete = { text = "_" },
+  --       topdelete = { text = "‾" },
+  --       changedelete = { text = "~" },
+  --     },
+  --   },
+  --   config = function(_, opts)
+  --     require("gitsigns").setup(opts)
+  --   end,
+  -- },
+}

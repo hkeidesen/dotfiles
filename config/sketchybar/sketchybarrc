@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+#
+# ~/.config/sketchybar/sketchybarrc
+#
+
+# ─────────────────────────────────────────────────────────────────
+# Global bar settings
+# ─────────────────────────────────────────────────────────────────
+sketchybar --bar                                   \
+  background.color=0xaa1e1e2e                      \
+  position=top                                     \
+  y_offset=0                                       \
+  padding_top=0                                    \
+  height=28                                        \
+  topmost=on                                       \
+  sticky=on                                        \
+  display=all
+
+# ─────────────────────────────────────────────────────────────────
+# Left: Frontmost app icon (click to open Spotlight)
+# ─────────────────────────────────────────────────────────────────
+sketchybar --add event front_app_switched                  \
+           --add item front_app left                       \
+           --set front_app                                 \
+             script="$HOME/.config/sketchybar/plugins/front_app.sh" \
+             click_script="open -a Spotlight"             \
+             update_freq=5                                \
+             icon.font.size=16                            \
+             label.drawing=off
+
+# ─────────────────────────────────────────────────────────────────
+# Right-side items
+# ─────────────────────────────────────────────────────────────────
+
+# 1) CPU usage (click to launch Activity Monitor)
+sketchybar --add item cpu right                                   \
+           --set cpu                                              \
+             script="$HOME/.config/sketchybar/plugins/cpu.sh"     \
+             click_script="open -a 'Activity Monitor'"            \
+             update_freq=2                                        \
+             icon= \
+             label.font.size=12
+
+# 2) Memory usage (click to open memory pressure)
+sketchybar --add item memory right                                \
+           --set memory                                           \
+             script="$HOME/.config/sketchybar/plugins/memory.sh"  \
+             click_script="open -a 'Activity Monitor' --args --memory" \
+             update_freq=5                                        \
+             icon= \
+             label.font.size=12
+
+# 3) Network (click to toggle Wi-Fi)
+sketchybar --add item wifi right                                  \
+           --set wifi                                             \
+             script="$HOME/.config/sketchybar/plugins/wifi.sh"    \
+             click_script="$HOME/.config/sketchybar/plugins/toggle_wifi.sh" \
+             update_freq=10                                       \
+             icon= \
+             label.font.size=12
+
+# 4) Battery (click to open Energy Saver prefs)
+sketchybar --add item battery right                               \
+           --set battery                                          \
+             script="$HOME/.config/sketchybar/plugins/battery.sh" \
+             click_script="open 'x-apple.systempreferences:com.apple.EnergySaver'" \
+             update_freq=30                                       \
+             icon=🔋 \
+             label.font.size=12
+
+# 5) Date & Time (click to open Calendar)
+sketchybar --add item date right                                  \
+           --set date                                             \
+             script="$HOME/.config/sketchybar/plugins/date.sh"    \
+             click_script="open -a Calendar"                     \
+             update_freq=60                                       \
+             icon= \
+             label.font.size=12
+
+# ─────────────────────────────────────────────────────────────────
+# Load it all
+# ─────────────────────────────────────────────────────────────────
+sketchybar --load

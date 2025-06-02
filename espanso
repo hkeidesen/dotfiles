@@ -1,0 +1,44 @@
+matches:
+  # 🔥 UUID generator
+  - trigger: ":uuid"
+    replace: "{{output}}"
+    vars:
+      - name: output
+        type: shell
+        params:
+          cmd: "uuidgen"
+
+  # 🧠 Git current branch
+  - trigger: ":gbranch"
+    replace: "{{output}}"
+    vars:
+      - name: output
+        type: shell
+        params:
+          cmd: "git rev-parse --abbrev-ref HEAD"
+
+  # 🚀 Vue 3 component skeleton
+  - trigger: ":vuecomp"
+    replace: |
+      <script setup lang="ts">
+      
+      </script>
+      
+      <template>
+        
+      </template>
+
+  # 🧰 Django query
+  - trigger: ":djangoqs"
+    replace: "Model.objects.filter(field=value)"
+
+  # ⚡ Common CLI shortcuts
+  - trigger: ":npmi"
+    replace: "pnpm install"
+
+  - trigger: ":shrug"
+    replace: "¯\\_(ツ)_/¯"
+
+  - trigger: ":email"
+    replace: "hans-kristian.norum@soprasteria.com"
+

@@ -1,0 +1,40 @@
+[core]
+	pager = delta
+[user]
+	email = hkeidesen@proton.me
+	name = Hans-Kristian Norum Eidesen
+[alias]
+  # Short status and log
+  s = status -sb
+  l = log --oneline --graph --decorate
+  lg = log --graph --pretty=format:'%C(yellow)%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset'
+
+  # GitHub-focused
+  co = checkout
+  cob = checkout -b
+  cm = commit -m
+  amend = commit --amend --no-edit
+  aa = add --all
+  p = push
+  pf = push --force-with-lease
+  pl = pull --rebase
+
+  # Clean up branches
+  cleanup = "!git branch --merged | grep -v '\\*\\|main\\|master' | xargs -n 1 git branch -d"
+  gone = "!git remote prune origin && git branch -vv | grep ': gone]' | awk '{print $1}' | xargs git branch -D"
+
+  # Open GitHub repo in browser (requires GitHub remote)
+  open = "!open $(git remote get-url origin | sed 's/git@github.com:/https:\\/\\/github.com\\//;s/.git$//')"
+
+  # Last commit diff
+  last = "!git show --stat --oneline HEAD"
+
+  # Interactively pick commits to reword or squash
+  fixup = "!f() { git commit --fixup=$1 && git rebase -i --autosquash $1^; }; f"
+
+  # Rebase with autosquash to clean history
+  squash = "!git rebase -i --autosquash HEAD~5"
+  d = diff --color-words
+  ds = difftool --tool=vimdiff
+[credential]
+	helper = osxkeychain
