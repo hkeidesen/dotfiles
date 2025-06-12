@@ -481,7 +481,6 @@ require("lazy").setup({
     opts = {
       ensure_installed = {
         "bash",
-        "c",
         "diff",
         "go",
         "html",
@@ -545,17 +544,13 @@ require("lazy").setup({
   },
 })
 
+vim.o.termguicolors = true
 vim.cmd([[
   highlight DiffviewNormal guibg=#1e1e2e
   highlight DiffviewCursorLine guibg=#313244
 ]])
-vim.cmd([[
-  if &term =~# 'wezterm'
-    " start undercurl (CSI 4:3 m), end undercurl (CSI 4:0 m)
-    set t_Cs=\e[4:3m
-    set t_Ce=\e[4:0m
-  endif
-]])
+vim.cmd([[ let &t_Cs = "\e[4:3m" ]])
+vim.cmd([[ let &t_Ce = "\e[4:0m" ]])
 -- Squiggly line
 vim.cmd([[highlight DiagnosticUnderlineError        gui=undercurl guisp=#FF0000]])
 vim.cmd([[highlight DiagnosticUnderlineWarn         gui=undercurl guisp=#FFA500]])

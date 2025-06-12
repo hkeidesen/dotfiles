@@ -1,58 +1,23 @@
-format = """
-$git_branch\
-$directory\
-$git_status\
-$python\
-$cmd_duration\
-$status\
-$line_break\
-$character"""
+format = '''
+$character$directory$python$git_branch[✗](bold yellow) 
+'''
 
-# Prompt character
+add_newline = false
+
 [character]
-success_symbol = "[❯](bold green)"
-error_symbol = "[✗](bold red)"
-vimcmd_symbol = "[❮](bold yellow)"
+success_symbol = "[➜](bold green)"
+error_symbol = "[➜](bold red)"
 
-# Directory
 [directory]
-style = "bold italic blue"
-truncation_length = 3
-truncate_to_repo = true
-read_only = " "
+format = "[$path]($style)[$read_only]($read_only_style) "
+truncation_length = 1
+style = "bold fg:#227B94"
+read_only = ":read_only"
+read_only_style = "bold yellow"
 
-# Git branch
 [git_branch]
-symbol = " "
-style = "bold purple"
-format = "[on $symbol$branch]($style) "
+format = '[git:(\([$branch](bold fg:#A6E22E)\))(\([$remote_branch](bold #FD971F)\))](bold fg:#66D9EF) '
 
-# Git status
-[git_status]
-style = "bold cyan"
-format = "[$all_status$ahead_behind]($style) "
-staged = "+"
-modified = "M"
-untracked = "?"
-conflicted = "≠"
-deleted = "✘"
-stashed = "≡"
-
-# Python
 [python]
-symbol = " "
-format = 'via [${symbol}py $version (\($virtualenv\))]($style) '
-style = "bold yellow"
-
-# Command duration
-[cmd_duration]
-min_time = 2000
-format = "[$duration]($style) "
-style = "bold red"
-
-# Command failure status
-[status]
-disabled = false
-format = "[$symbol$status]($style) "
-symbol = "✗ "
-style = "bold red"
+format = '[🐍 $virtualenv]($style) '
+style  = 'bold fg:#FFD343'

@@ -14,7 +14,7 @@ return {
 
       local ensure_installed = {
         "biome",
-        "pyright",
+        "basedpyright",
         "ruff",
         "jsonls",
         "html",
@@ -41,7 +41,38 @@ return {
           client.server_capabilities.documentRangeFormattingProvider = false
         end,
       })
+      -- Track inlay hints state per buffer (all start disabled)
+      local inlay_hints_state = {}
 
+      -- Register attach to mark buffers that support inlay hints, but do not enable by default
+      vim.api.nvim_create_autocmd("LspAttach", {
+        group = vim.api.nvim_create_augroup("lsp_inlay_hints", { clear = true }),
+        callback = function(args)
+          local client = vim.lsp.get_client_by_id(args.data.client_id)
+          local bufnr = args.buf
+          if client and client.supports_method("textDocument/inlayHint") then
+            -- mark supported but leave disabled
+            inlay_hints_state[bufnr] = false
+          end
+        end,
+      })
+
+      -- Command to toggle inlay hints in current buffer
+      vim.api.nvim_create_user_command("ToggleInlayHints", function()
+        local bufnr = vim.api.nvim_get_current_buf()
+        local enabled = inlay_hints_state[bufnr]
+
+        if enabled == nil then
+          print("LSP inlay hints not supported by attached server in this buffer.")
+          return
+        end
+
+        -- toggle
+        vim.lsp.inlay_hint.enable(not enabled, { bufnr = bufnr })
+        inlay_hints_state[bufnr] = not enabled
+      end, {
+        desc = "Toggle LSP inlay hints in the current buffer (default off)",
+      })
       lspconfig.ruff.setup({
         capabilities = caps,
         init_options = { settings = { lineLength = 200 } },
@@ -49,17 +80,48 @@ return {
         root_dir = util.root_pattern("pyproject.toml", "ruff.toml", ".git"),
       })
 
-      lspconfig.pyright.setup({
+      -- lspconfig.pylsp.setup({
+      -- capabilities = caps,
+      -- root_dir = util.root_pattern("pyproject.toml", "setup.py", ".git"),
+      -- settings = {
+      --   pylsp = {
+      --     plugins = {
+      --       pylsp_mypy = {
+      --         enabled = true,
+      --         args = { "--strict" },
+      --         live_mode = true,
+      --       },
+      --       pycodestyle = { enabled = false },
+      --       mccabe = { enabled = false },
+      --       pyflakes = { enabled = false },
+      --     },
+      --   },
+      -- },
+      -- })
+      if server_config == "pylsp" then
+        return
+      end
+
+      lspconfig.basedpyright.setup({
         capabilities = caps,
-        root_dir = util.root_pattern("pyproject.toml", "setup.py", ".git"),
         settings = {
-          python = {
+          basedpyright = {
             analysis = {
-              autoImportCompletions = true,
-              diagnosticMode = "workspace",
-              typeCheckingMode = "strict",
+
+              typeCheckingMode = "recommended",
+              reportReturnType = "error",
+              reportIncompatibleReturnType = "error",
+              reportIncompatibleMethodOverride = "error",
+
+              diagnosticMode = "openFilesOnly",
+              autoSearchPaths = true,
               useLibraryCodeForTypes = true,
-              extraPaths = { "/opt/utils-common" },
+
+              inlayHints = {
+                variableTypes = true,
+                functionReturnTypes = true,
+                callArgumentNames = true,
+              },
             },
           },
         },
@@ -81,6 +143,8 @@ return {
           map("<leader>rn", vim.lsp.buf.rename, "Rename Symbol")
           map("<leader>ca", vim.lsp.buf.code_action, "Code Action")
           map("<leader>cd", vim.diagnostic.open_float, "Show Diagnostics")
+
+          map("<C-k>", vim.lsp.buf.signature_help, "Signature Help", "i")
         end,
       })
     end,

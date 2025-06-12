@@ -42,3 +42,5 @@ matches:
   - trigger: ":email"
     replace: "hans-kristian.norum@soprasteria.com"
 
+  - trigger: ":password"
+    replace: "Credits-timer-disks-toro-unsure-onwards-1337"
