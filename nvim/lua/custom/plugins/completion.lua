@@ -26,17 +26,18 @@ return {
       fuzzy = { implementation = "prefer_rust_with_warning" },
       snippets = { preset = "luasnip" },
 
-      -- 👉 Add Copilot to the default sources
       sources = {
-        default = { "lsp", "copilot", "path", "snippets", "buffer" },
-
-        -- 👉 Tell blink how to talk to Copilot
+        default = { "lsp", "copilot", "path", "snippets", "buffer", "nvim-px-to-rem" },
         providers = {
+          ["nvim-px-to-rem"] = {
+            module = "nvim-px-to-rem.integrations.blink",
+            name = "nvim-px-to-rem",
+          },
           copilot = {
             name = "Copilot",
             module = "blink-copilot",
             async = true,
-            score_offset = 120, -- lift Copilot suggestions near the top
+            score_offset = 120,
           },
         },
       },

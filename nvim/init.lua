@@ -105,6 +105,10 @@ vim.keymap.set("n", "<C-u>", "<C-u>zz")
 vim.keymap.set("n", "<C-f>", "<C-d>zz")
 vim.keymap.set("n", "<C-b>", "<C-d>zz")
 
+-- Center the screen when moving up and down
+vim.keymap.set("n", "j", "jzz", { noremap = true, silent = true })
+vim.keymap.set("n", "k", "kzz", { noremap = true, silent = true })
+
 --Close all buffers but keep current
 vim.keymap.set(
   "n",
@@ -259,7 +263,7 @@ end
 require("lazy").setup({
   { import = "custom/plugins" },
   "tpope/vim-sleuth",
-  { -- Adds git related signs to the gutter, as well as utilities for managing changes
+  {
     "lewis6991/gitsigns.nvim",
     config = function()
       require("gitsigns").setup({
@@ -272,20 +276,60 @@ require("lazy").setup({
           changedelete = { text = "~" },
         },
         on_attach = function(bufnr)
+          local gs = require("gitsigns")
+
+          local function map(mode, lhs, rhs, desc)
+            vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, desc = desc })
+          end
+
+          -- Navigation
+          map("n", "]c", function()
+            if vim.wo.diff then
+              return "]c"
+            end
+            vim.schedule(function()
+              gs.next_hunk()
+            end)
+            return "<Ignore>"
+          end, "Next hunk")
+
+          map("n", "[c", function()
+            if vim.wo.diff then
+              return "[c"
+            end
+            vim.schedule(function()
+              gs.prev_hunk()
+            end)
+            return "<Ignore>"
+          end, "Previous hunk")
+
           -- Actions
-          vim.keymap.set(
-            "n",
-            "<leader>gb",
-            '<cmd>lua require"gitsigns".blame_line{full=true}<CR>',
-            { desc = "Blame line" }
-          )
-          vim.keymap.set(
-            "n",
-            "<leader>gB",
-            '<cmd>lua require"gitsigns".toggle_current_line_blame()<CR>',
-            { desc = "Toggle blame line" }
-          )
-          vim.keymap.set("n", "<leader>gd", '<cmd>lua require"gitsigns".diffthis()<CR>', { desc = "Diff against HEAD" })
+          map("n", "<leader>gs", gs.stage_hunk, "Stage hunk")
+          map("n", "<leader>gr", gs.reset_hunk, "Reset hunk")
+          map("v", "<leader>gs", function()
+            gs.stage_hunk({ vim.fn.line("."), vim.fn.line("v") })
+          end, "Stage hunk")
+          map("v", "<leader>gr", function()
+            gs.reset_hunk({ vim.fn.line("."), vim.fn.line("v") })
+          end, "Reset hunk")
+          map("n", "<leader>gS", gs.stage_buffer, "Stage buffer")
+          map("n", "<leader>gu", gs.undo_stage_hunk, "Undo stage hunk")
+          map("n", "<leader>gR", gs.reset_buffer, "Reset buffer")
+          map("n", "<leader>gp", gs.preview_hunk, "Preview hunk")
+          map("n", "<leader>gP", function()
+            gs.preview_hunk_inline()
+          end, "Preview inline hunk")
+          map("n", "<leader>gb", function()
+            gs.blame_line({ full = true })
+          end, "Blame line")
+          map("n", "<leader>gB", gs.toggle_current_line_blame, "Toggle blame line")
+          map("n", "<leader>gd", gs.diffthis, "Diff against index")
+          map("n", "<leader>gD", function()
+            gs.diffthis("~")
+          end, "Diff against previous commit")
+
+          -- Text object
+          map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", "Select hunk")
         end,
       })
     end,

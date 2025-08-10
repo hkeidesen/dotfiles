@@ -18,6 +18,7 @@ return {
         "ruff",
         "jsonls",
         "html",
+        "gopls",
       }
 
       require("mason").setup()
@@ -101,7 +102,20 @@ return {
       if server_config == "pylsp" then
         return
       end
-
+      lspconfig.gopls.setup({
+        capabilities = caps,
+        root_dir = util.root_pattern("go.mod", ".git"),
+        settings = {
+          gopls = {
+            analyses = {
+              unusedparams = true,
+              shadow = true,
+            },
+            staticcheck = true,
+            gofumpt = true,
+          },
+        },
+      })
       lspconfig.basedpyright.setup({
         capabilities = caps,
         settings = {

@@ -223,3 +223,7 @@ function auto_track_dotfiles() {
 
 # Run only for interactive shells
 [[ $- == *i* ]] && auto_track_dotfiles
+
+export CTOP_DOCKER_SOCKET=unix://$HOME/.colima/default/docker.sock
+
+alias ctop='docker run --rm -ti -v /var/run/docker.sock:/var/run/docker.sock quay.io/vektorlab/ctop:latest'
