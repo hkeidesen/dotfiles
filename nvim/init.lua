@@ -1,3 +1,13 @@
+require("ui.statusline")
+vim.api.nvim_create_autocmd("ColorScheme", {
+  pattern = "*",
+  callback = function()
+    vim.cmd([[
+      highlight StatusLine guibg=NONE ctermbg=NONE
+      highlight StatusLineNC guibg=NONE ctermbg=NONE
+    ]])
+  end,
+})
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 vim.g.have_nerd_font = true
