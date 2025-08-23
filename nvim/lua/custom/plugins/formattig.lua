@@ -1,4 +1,3 @@
--- Conform config
 return {
   {
     "stevearc/conform.nvim",
@@ -27,17 +26,21 @@ return {
           json = true,
           jsonc = true,
         }
+
         local lsp_format_opt
-        if disable_filetypes[vim.bo[bufnr].filetype] then
+        if disable_filetypes[ft] then
           lsp_format_opt = "never"
-        elseif biome_filetypes[vim.bo[bufnr].filetype] then
+        elseif biome_filetypes[ft] then
           lsp_format_opt = "always"
         else
           lsp_format_opt = "fallback"
         end
-        if ft == "javascriptreact" or ft == "typescriptreact" then
+
+        -- Force external formatter for these (avoid LSP formatters)
+        if ft == "javascriptreact" or ft == "typescriptreact" or ft == "markdown" or ft == "mdx" then
           lsp_format_opt = "never"
         end
+
         return {
           timeout_ms = 500,
           lsp_format = lsp_format_opt,
@@ -50,6 +53,11 @@ return {
         typescriptreact = { "biome" },
         json = { "biome" },
         jsonc = { "biome" },
+
+        -- 👇 Add these
+        markdown = { "prettier" },
+        mdx = { "prettier" },
+
         vue = { "prettier" },
         lua = { "stylua" },
         python = { "ruff_fix", "ruff_format", "ruff_organize_imports" },
@@ -61,6 +69,10 @@ return {
         stylua = {
           prepend_args = { "--indent-type", "Spaces", "--indent-width", "2" },
         },
+        -- Optional: tune Prettier for Markdown here (otherwise it reads .prettierrc)
+        -- prettier = {
+        --   prepend_args = { "--prose-wrap", "always", "--print-width", "100" },
+        -- },
       },
       hooks = {
         before_format = function(bufnr)

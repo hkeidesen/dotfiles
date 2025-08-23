@@ -12,18 +12,35 @@ return {
       local lspconfig = require("lspconfig")
       local util = require("lspconfig.util")
 
-      local ensure_installed = {
+      -- LSP servers only
+      local lsp_servers = {
         "biome",
         "basedpyright",
         "ruff",
         "jsonls",
         "html",
         "gopls",
+        "typos_lsp",
+        "marksman", -- Markdown language server
+      }
+
+      -- All tools (LSP servers + formatters + linters)
+      local all_tools = {
+        "biome",
+        "basedpyright",
+        "ruff",
+        "jsonls",
+        "html",
+        "gopls",
+        "typos_lsp",
+        "marksman", -- Markdown language server
+        "markdownlint-cli2", -- Markdown linter
+        "prettier", -- Formatter for markdown and other files
       }
 
       require("mason").setup()
       require("mason-lspconfig").setup({
-        ensure_installed = ensure_installed,
+        ensure_installed = lsp_servers,
         automatic_enable = false,
       })
 
@@ -141,7 +158,24 @@ return {
         },
       })
 
-      require("mason-tool-installer").setup({ ensure_installed = ensure_installed })
+      require("mason-tool-installer").setup({ ensure_installed = all_tools })
+
+      -- Setup typos LSP
+      lspconfig.typos_lsp.setup({
+        capabilities = caps,
+        -- Logging level (optional)
+        cmd_env = { RUST_LOG = "error" },
+        init_options = {
+          -- How typos are rendered in the editor
+          -- Can be one of: "Error", "Warning", "Info" or "Hint" (default is "Error")
+          diagnosticSeverity = "Error"
+        },
+      })
+
+      -- Setup marksman (markdown LSP)
+      lspconfig.marksman.setup({
+        capabilities = caps,
+      })
 
       vim.api.nvim_create_autocmd("LspAttach", {
         group = vim.api.nvim_create_augroup("lsp_keymaps", { clear = true }),

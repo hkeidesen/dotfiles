@@ -1,4 +1,3 @@
-require("ui.statusline")
 vim.api.nvim_create_autocmd("ColorScheme", {
   pattern = "*",
   callback = function()
@@ -648,3 +647,14 @@ vim.keymap.set("n", "gK", function()
   vim.diagnostic.config(is_minimal and minimal_diagnostics or detailed_diagnostics)
   print(is_minimal and "Diagnostics: minimal view" or "Diagnostics: detailed view")
 end, { desc = "Toggle diagnostic virtual_lines" })
+
+require("ui.statusline")
+vim.api.nvim_create_autocmd("ColorScheme", {
+  pattern = "*",
+  callback = function()
+    vim.cmd([[
+      highlight StatusLine guibg=NONE ctermbg=NONE
+      highlight StatusLineNC guibg=NONE ctermbg=NONE
+    ]])
+  end,
+})

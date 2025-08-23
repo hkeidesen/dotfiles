@@ -8,6 +8,9 @@ return {
 
       -- NEW ▸ Copilot completion source
       "fang2hou/blink-copilot",
+      
+      -- NEW ▸ Words completion source
+      "archie-judd/blink-cmp-words",
     },
 
     ---@type blink.cmp.Config
@@ -21,6 +24,11 @@ return {
         accept = { auto_brackets = { enabled = true } },
         documentation = { auto_show = true, auto_show_delay_ms = 200 },
         ghost_text = { enabled = false },
+        trigger = { 
+          show_on_insert_on_trigger_character = true,
+          show_on_keyword = true,
+        },
+        menu = { auto_show = true },
       },
       signature = { enabled = true },
       fuzzy = { implementation = "prefer_rust_with_warning" },
