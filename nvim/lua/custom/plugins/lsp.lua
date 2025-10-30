@@ -8,12 +8,10 @@ return {
       { "j-hui/fidget.nvim", opts = {} },
       "saghen/blink.cmp",
     },
+
     config = function()
-      local lspconfig = require("lspconfig")
-      local util = require("lspconfig.util")
-
-      -- LSP servers only
-      local lsp_servers = {
+      -- Mason: install binaries
+      local servers = {
         "biome",
         "basedpyright",
         "ruff",
@@ -21,133 +19,121 @@ return {
         "html",
         "gopls",
         "typos_lsp",
-        "marksman", -- Markdown language server
+        "marksman",
       }
-
-      -- All tools (LSP servers + formatters + linters)
-      local all_tools = {
-        "biome",
-        "basedpyright",
-        "ruff",
-        "jsonls",
-        "html",
-        "gopls",
-        "typos_lsp",
-        "marksman", -- Markdown language server
-        "markdownlint-cli2", -- Markdown linter
-        "prettier", -- Formatter for markdown and other files
-      }
+      local tools = vim.list_extend(vim.deepcopy(servers), {
+        "markdownlint-cli2",
+        "prettier",
+      })
 
       require("mason").setup()
       require("mason-lspconfig").setup({
-        ensure_installed = lsp_servers,
-        automatic_enable = false,
+        ensure_installed = servers,
+        automatic_installation = false,
       })
+      require("mason-tool-installer").setup({ ensure_installed = tools })
 
+      -- Capabilities (Blink if present)
       local caps = vim.lsp.protocol.make_client_capabilities()
-      local ok, blink_cmp = pcall(require, "blink.cmp")
-      if ok then
+      local ok_blink, blink_cmp = pcall(require, "blink.cmp")
+      if ok_blink then
         caps = blink_cmp.get_lsp_capabilities(caps)
       end
 
-      lspconfig.biome.setup({
-        capabilities = caps,
-        filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact", "json", "jsonc", "vue" },
-        root_dir = util.root_pattern("biome.json", "package.json", ".git"),
-        on_attach = function(client)
-          client.server_capabilities.documentFormattingProvider = false
-          client.server_capabilities.documentRangeFormattingProvider = false
-        end,
-      })
-      -- Track inlay hints state per buffer (all start disabled)
-      local inlay_hints_state = {}
+      -- Helper: root_dir via vim.fs (0.11+)
+      local function root_dir(patterns)
+        local found = vim.fs.find(patterns, { upward = true, stop = vim.loop.os_homedir() })
+        return (found[1] and vim.fs.dirname(found[1])) or vim.uv.cwd()
+      end
 
-      -- Register attach to mark buffers that support inlay hints, but do not enable by default
+      -- Inlay hints: default OFF, toggle per buffer
+      local inlay = {}
       vim.api.nvim_create_autocmd("LspAttach", {
         group = vim.api.nvim_create_augroup("lsp_inlay_hints", { clear = true }),
         callback = function(args)
           local client = vim.lsp.get_client_by_id(args.data.client_id)
-          local bufnr = args.buf
           if client and client.supports_method("textDocument/inlayHint") then
-            -- mark supported but leave disabled
-            inlay_hints_state[bufnr] = false
+            inlay[args.buf] = false
           end
         end,
       })
-
-      -- Command to toggle inlay hints in current buffer
       vim.api.nvim_create_user_command("ToggleInlayHints", function()
         local bufnr = vim.api.nvim_get_current_buf()
-        local enabled = inlay_hints_state[bufnr]
-
-        if enabled == nil then
-          print("LSP inlay hints not supported by attached server in this buffer.")
+        if inlay[bufnr] == nil then
+          print("LSP inlay hints not supported in this buffer.")
           return
         end
+        vim.lsp.inlay_hint.enable(not inlay[bufnr], { bufnr = bufnr })
+        inlay[bufnr] = not inlay[bufnr]
+      end, { desc = "Toggle LSP inlay hints (default off)" })
 
-        -- toggle
-        vim.lsp.inlay_hint.enable(not enabled, { bufnr = bufnr })
-        inlay_hints_state[bufnr] = not enabled
-      end, {
-        desc = "Toggle LSP inlay hints in the current buffer (default off)",
+      -- Keymaps on attach
+      vim.api.nvim_create_autocmd("LspAttach", {
+        group = vim.api.nvim_create_augroup("lsp_keymaps", { clear = true }),
+        callback = function(ev)
+          local b = ev.buf
+          local function map(lhs, rhs, desc, mode)
+            vim.keymap.set(mode or "n", lhs, rhs, { buffer = b, desc = "LSP: " .. desc })
+          end
+          -- Use fzf-lua for definitions (jumps directly if only one, picker if multiple)
+          map("gd", function()
+            local ok, fzf = pcall(require, "fzf-lua")
+            if ok and fzf.lsp_definitions then
+              fzf.lsp_definitions({ jump1 = true })
+            else
+              vim.lsp.buf.definition()
+            end
+          end, "Goto Definition")
+          -- Use fzf-lua for references (jumps directly if only one, picker if multiple)
+          map("gr", function()
+            local ok, fzf = pcall(require, "fzf-lua")
+            if ok and fzf.lsp_references then
+              fzf.lsp_references({ jump1 = true, ignore_current_line = true })
+            else
+              vim.lsp.buf.references()
+            end
+          end, "Goto References")
+          map("K", vim.lsp.buf.hover, "Hover Docs")
+          map("<leader>rn", vim.lsp.buf.rename, "Rename Symbol")
+          map("<leader>ca", vim.lsp.buf.code_action, "Code Action")
+          map("<leader>cd", vim.diagnostic.open_float, "Show Diagnostics")
+          map("<C-k>", vim.lsp.buf.signature_help, "Signature Help", "i")
+        end,
       })
-      lspconfig.ruff.setup({
+
+      -------------------------------------------------------------------------
+      -- New API: use vim.lsp.config('name', overrides) then vim.lsp.enable('name')
+      -- mason-lspconfig injects proper `cmd` so we don't need to set it manually.
+      -------------------------------------------------------------------------
+
+      vim.lsp.config("biome", {
         capabilities = caps,
-        init_options = { settings = { lineLength = 200 } },
+        filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact", "json", "jsonc", "vue" },
+        root_dir = root_dir({ "biome.json", "package.json", ".git" }),
+      })
+
+      -- Ruff (fast linting, formatting, and code actions - keep all its capabilities)
+      vim.lsp.config("ruff", {
+        capabilities = caps,
         filetypes = { "python" },
-        root_dir = util.root_pattern("pyproject.toml", "ruff.toml", ".git"),
+        root_dir = root_dir({ "pyproject.toml", "ruff.toml", ".git" }),
+        init_options = { settings = { lineLength = 200 } },
+        -- No on_attach - let Ruff provide everything it supports
       })
 
-      -- lspconfig.pylsp.setup({
-      -- capabilities = caps,
-      -- root_dir = util.root_pattern("pyproject.toml", "setup.py", ".git"),
-      -- settings = {
-      --   pylsp = {
-      --     plugins = {
-      --       pylsp_mypy = {
-      --         enabled = true,
-      --         args = { "--strict" },
-      --         live_mode = true,
-      --       },
-      --       pycodestyle = { enabled = false },
-      --       mccabe = { enabled = false },
-      --       pyflakes = { enabled = false },
-      --     },
-      --   },
-      -- },
-      -- })
-      if server_config == "pylsp" then
-        return
-      end
-      lspconfig.gopls.setup({
-        capabilities = caps,
-        root_dir = util.root_pattern("go.mod", ".git"),
-        settings = {
-          gopls = {
-            analyses = {
-              unusedparams = true,
-              shadow = true,
-            },
-            staticcheck = true,
-            gofumpt = true,
-          },
-        },
-      })
-      lspconfig.basedpyright.setup({
+      -- basedpyright (type checking only - disable what Ruff already provides)
+      vim.lsp.config("basedpyright", {
         capabilities = caps,
         settings = {
           basedpyright = {
             analysis = {
-
               typeCheckingMode = "recommended",
               reportReturnType = "error",
               reportIncompatibleReturnType = "error",
               reportIncompatibleMethodOverride = "error",
-
               diagnosticMode = "openFilesOnly",
               autoSearchPaths = true,
               useLibraryCodeForTypes = true,
-
               inlayHints = {
                 variableTypes = true,
                 functionReturnTypes = true,
@@ -156,45 +142,58 @@ return {
             },
           },
         },
+        on_attach = function(client)
+          -- Disable features that Ruff already provides (fast)
+          client.server_capabilities.hoverProvider = false
+          client.server_capabilities.renameProvider = false
+          -- Keep: definitions, references, completion, type info (Ruff doesn't do these)
+        end,
       })
 
-      require("mason-tool-installer").setup({ ensure_installed = all_tools })
-
-      -- Setup typos LSP
-      lspconfig.typos_lsp.setup({
+      -- gopls
+      vim.lsp.config("gopls", {
         capabilities = caps,
-        -- Logging level (optional)
-        cmd_env = { RUST_LOG = "error" },
-        init_options = {
-          -- How typos are rendered in the editor
-          -- Can be one of: "Error", "Warning", "Info" or "Hint" (default is "Error")
-          diagnosticSeverity = "Error"
+        root_dir = root_dir({ "go.mod", ".git" }),
+        settings = {
+          gopls = {
+            analyses = { unusedparams = true, shadow = true },
+            staticcheck = true,
+            gofumpt = true,
+          },
         },
       })
 
-      -- Setup marksman (markdown LSP)
-      lspconfig.marksman.setup({
+      -- jsonls
+      vim.lsp.config("jsonls", {
+        capabilities = caps,
+        root_dir = root_dir({ "package.json", ".git" }),
+      })
+
+      -- html
+      vim.lsp.config("html", {
         capabilities = caps,
       })
 
-      vim.api.nvim_create_autocmd("LspAttach", {
-        group = vim.api.nvim_create_augroup("lsp_keymaps", { clear = true }),
-        callback = function(ev)
-          local buf = ev.buf
-          local function map(keys, fn, desc, mode)
-            vim.keymap.set(mode or "n", keys, fn, { buffer = buf, desc = "LSP: " .. desc })
-          end
-
-          map("gd", vim.lsp.buf.definition, "Goto Definition")
-          map("gr", vim.lsp.buf.references, "Goto References")
-          map("K", vim.lsp.buf.hover, "Hover Docs")
-          map("<leader>rn", vim.lsp.buf.rename, "Rename Symbol")
-          map("<leader>ca", vim.lsp.buf.code_action, "Code Action")
-          map("<leader>cd", vim.diagnostic.open_float, "Show Diagnostics")
-
-          map("<C-k>", vim.lsp.buf.signature_help, "Signature Help", "i")
-        end,
+      -- typos-lsp
+      vim.lsp.config("typos_lsp", {
+        capabilities = caps,
+        cmd_env = { RUST_LOG = "error" },
+        init_options = { diagnosticSeverity = "Error" },
       })
+
+      -- marksman
+      vim.lsp.config("marksman", {
+        capabilities = caps,
+      })
+
+      -- Disable unwanted Python LSP servers
+      vim.lsp.config("pylsp", { enabled = false })
+      vim.lsp.config("pyright", { enabled = false })
+
+      -- Finally, enable all of them (activates per filetype)
+      for _, name in ipairs(servers) do
+        vim.lsp.enable(name)
+      end
     end,
   },
 }

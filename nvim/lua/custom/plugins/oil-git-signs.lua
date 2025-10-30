@@ -1,94 +1,167 @@
 return {
-  -- oil.nvim configuration
   {
     "stevearc/oil.nvim",
-    lazy = true,
-    cmd = { "Oil" }, -- Lazy-load with the `:Oil` command
+    lazy = false,
+    dependencies = {
+      "nvim-tree/nvim-web-devicons",
+    },
     keys = {
-      { "_", "<cmd>Oil<CR>", desc = "Open Oil" }, -- Open oil explorer using the `_` key
+      { "-", "<cmd>Oil<CR>", desc = "Open parent directory" },
     },
     opts = {
-      default_file_explorer = true, -- Set as the default file explorer
-      delete_to_trash = true, -- Move files to trash instead of permanent deletion
-      columns = { "icon" }, -- Show only icons (no git status)
-      use_default_keymaps = false, -- Disable default keymaps to avoid conflicts
-      keymaps = {
-        ["g?"] = "actions.show_help", -- Show help
-        ["<CR>"] = "actions.select", -- Select file
-        ["<C-p>"] = "actions.preview", -- Preview file
-        ["q"] = "actions.close", -- Close buffer
-        ["<backspace>"] = "actions.parent", -- Go to parent directory
-        ["_"] = "actions.open_cwd", -- Open current working directory
-        ["gs"] = "actions.change_sort", -- Change sort order
-        ["H"] = "actions.toggle_hidden", -- Toggle hidden files
-        ["g\\"] = "actions.toggle_trash", -- Toggle trash
+      default_file_explorer = true,
+      delete_to_trash = true,
+      skip_confirm_for_simple_edits = true,
+
+      -- Keep minimal columns for speed
+      columns = {
+        "icon",
       },
+
+      buf_options = {
+        buflisted = false,
+        bufhidden = "hide",
+      },
+
       win_options = {
-        signcolumn = "yes:2", -- Enable two sign columns for Git status
-        statuscolumn = "", -- Remove the status column for cleaner UI
+        wrap = false,
+        signcolumn = "yes:2", -- Required for oil-git-status (2 columns: index + working tree)
+        cursorcolumn = false,
+        foldcolumn = "0",
+        spell = false,
+        list = false,
+        conceallevel = 3,
+        concealcursor = "nvic",
       },
+
+      -- Performance: Disable file watching
+      watch_for_changes = false,
+      cleanup_delay_ms = 1000,
+
+      lsp_file_methods = {
+        -- This is likely the culprit! LSP operations can be slow
+        enabled = false, -- Disable unless you need LSP-aware file operations
+        timeout_ms = 500,
+        autosave_changes = false,
+      },
+
+      constrain_cursor = "editable",
+      use_default_keymaps = true,
+
+      keymaps = {
+        ["<C-h>"] = false, -- Disable if conflicts with tmux/window nav
+        ["<C-l>"] = false, -- Disable if conflicts with tmux/window nav
+        ["q"] = "actions.close",
+        ["<C-c>"] = "actions.close",
+      },
+
       view_options = {
-        show_hidden = true, -- Show hidden files in the explorer
-        highlight_filename = function(entry)
-          -- Custom logic for filename highlight (optional)
+        -- Start with hidden files visible (you had this enabled)
+        show_hidden = true,
+
+        is_hidden_file = function(name, bufnr)
+          return vim.startswith(name, ".")
         end,
+
+        -- CRITICAL: Skip heavy directories entirely
+        is_always_hidden = function(name, bufnr)
+          return name == ".."
+            or name == ".git"
+            or name == "node_modules"
+            or name == ".next"
+            or name == "dist"
+            or name == "build"
+            or name == "target"
+            or name == "vendor"
+            or name == ".venv"
+            or name == "__pycache__"
+        end,
+
+        natural_order = "fast", -- Use fast mode for large directories
+        case_insensitive = false,
+
+        sort = {
+          { "type", "asc" },
+          { "name", "asc" },
+        },
+      },
+
+      float = {
+        padding = 2,
+        max_width = 0.9,
+        max_height = 0.9,
+        border = "rounded",
+        win_options = {
+          winblend = 0,
+        },
+      },
+
+      preview_win = {
+        update_on_cursor_moved = true,
+        preview_method = "fast_scratch", -- Fastest preview method
+
+        -- Skip preview for very large files
+        disable_preview = function(filename)
+          local max_filesize = 1024 * 1024 -- 1MB
+          local ok, stats = pcall(vim.loop.fs_stat, filename)
+          if ok and stats and stats.size > max_filesize then
+            return true
+          end
+          return false
+        end,
+
+        win_options = {},
+      },
+
+      confirmation = {
+        border = "rounded",
+      },
+
+      progress = {
+        border = "rounded",
+        minimized_border = "none",
       },
     },
   },
 
-  -- oil-git-status.nvim configuration
   {
     "refractalize/oil-git-status.nvim",
-    dependencies = {
-      "stevearc/oil.nvim", -- Ensure oil.nvim is loaded first
-    },
+    dependencies = { "stevearc/oil.nvim" },
+    lazy = false,
     config = function()
       require("oil-git-status").setup({
-        show_ignored = true, -- Show files that match gitignore with !!
-        symbols = { -- Customize the symbols that appear in the git status columns
+        -- Keep show_ignored false for better performance
+        -- Set to true only if you need to see gitignored files
+        show_ignored = false,
+
+        -- Clean symbols (you can customize these)
+        symbols = {
           index = {
-            ["!"] = "!", -- Ignored
-            ["?"] = "?", -- Untracked
-            ["A"] = "A", -- Added
-            ["C"] = "C", -- Copied
-            ["D"] = "D", -- Deleted
-            ["M"] = "M", -- Modified
-            ["R"] = "R", -- Renamed
-            ["T"] = "T", -- Type Changed
-            ["U"] = "U", -- Unmerged
-            [" "] = " ", -- Unmodified
+            ["!"] = "◌",
+            ["?"] = "?",
+            ["A"] = "+",
+            ["C"] = "C",
+            ["D"] = "-",
+            ["M"] = "~",
+            ["R"] = "→",
+            ["T"] = "T",
+            ["U"] = "U",
+            [" "] = " ",
           },
           working_tree = {
-            ["!"] = "!", -- Ignored
-            ["?"] = "?", -- Untracked
-            ["A"] = "A", -- Added
-            ["C"] = "C", -- Copied
-            ["D"] = "D", -- Deleted
-            ["M"] = "M", -- Modified
-            ["R"] = "R", -- Renamed
-            ["T"] = "T", -- Type Changed
-            ["U"] = "U", -- Unmerged
-            [" "] = " ", -- Unmodified
+            ["!"] = "◌",
+            ["?"] = "?",
+            ["A"] = "+",
+            ["C"] = "C",
+            ["D"] = "-",
+            ["M"] = "~",
+            ["R"] = "→",
+            ["T"] = "T",
+            ["U"] = "U",
+            [" "] = " ",
           },
         },
       })
-    end,
-  },
-
-  -- Optional: gitsigns.nvim for showing Git status in the gutter (works well with oil)
-  {
-    "lewis6991/gitsigns.nvim",
-    opts = {
-      signs = {
-        add = { text = "+" }, -- Added lines
-        change = { text = "~" }, -- Modified lines
-        delete = { text = "_" }, -- Deleted lines
-        topdelete = { text = "‾" }, -- Top delete (horizontally deleted lines)
-        changedelete = { text = "~" }, -- Lines with change and delete
-      },
-    },
-    config = function(_, opts)
-      require("gitsigns").setup(opts) -- Initialize gitsigns with the configured options
     end,
   },
 }

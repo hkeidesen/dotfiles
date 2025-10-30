@@ -114,10 +114,6 @@ vim.keymap.set("n", "<C-u>", "<C-u>zz")
 vim.keymap.set("n", "<C-f>", "<C-d>zz")
 vim.keymap.set("n", "<C-b>", "<C-d>zz")
 
--- Center the screen when moving up and down
-vim.keymap.set("n", "j", "jzz", { noremap = true, silent = true })
-vim.keymap.set("n", "k", "kzz", { noremap = true, silent = true })
-
 --Close all buffers but keep current
 vim.keymap.set(
   "n",
@@ -146,60 +142,6 @@ vim.keymap.set("n", "yae", "ggVGy", { noremap = true, silent = true, desc = "Yan
 vim.keymap.set("n", "cae", 'ggVG"_c', { noremap = true, silent = true, desc = "Change entire file" })
 vim.keymap.set("n", "vae", "ggVG", { noremap = true, silent = true, desc = "Select entire file" })
 
-vim.api.nvim_create_autocmd("BufWritePost", {
-  callback = function()
-    local qf = vim.fn.getqflist()
-    if not qf or #qf == 0 then
-      return
-    end -- No need to update an empty qflist
-
-    for i, item in ipairs(qf) do
-      if item.bufnr and vim.api.nvim_buf_is_loaded(item.bufnr) then
-        local lines = vim.api.nvim_buf_get_lines(item.bufnr, item.lnum - 1, item.lnum, false)
-        if lines[1] then
-          qf[i].text = lines[1] -- Update quickfix entry
-        end
-      end
-    end
-    vim.fn.setqflist(qf, "r") -- Replace quickfix list with updated results
-  end,
-})
-
-local function yank_after_colon()
-  local line = vim.fn.getline(".")
-  local text = string.match(line, ":%s*([^,]+)")
-  if text then
-    vim.fn.setreg('"', text)
-    print("Yanked: " .. text)
-  else
-    print("No match found")
-  end
-end
-
-vim.keymap.set("n", "ya:", yank_after_colon, { desc = "Yank text after ':' until the first comma" })
-
-local function select_after_colon()
-  -- Get the current line number and text.
-  local lnum = vim.fn.line(".")
-  local line = vim.fn.getline(".")
-
-  local colon_start, colon_end = string.find(line, ":%s*")
-  if colon_start then
-    local start_col = colon_end + 1
-    local comma_start = string.find(line, ",", start_col)
-    local end_col = comma_start and (comma_start - 1) or #line
-
-    vim.fn.setpos("'<", { 0, lnum, start_col, 0 })
-    vim.fn.setpos("'>", { 0, lnum, end_col, 0 })
-    -- Reselect the visual area.
-    vim.cmd("normal! gv")
-  else
-    print("No colon found on this line")
-  end
-end
-
--- Map the function to "va:" in normal mode.
-vim.keymap.set("n", "va:", select_after_colon, { desc = "Visually select text after ':' until the first comma" })
 -- Diagnostic keymaps
 vim.keymap.set("n", "<C-q>", vim.diagnostic.setloclist, { desc = "Open diagnostic [Q]uickfix list" })
 
@@ -311,31 +253,6 @@ require("lazy").setup({
             end)
             return "<Ignore>"
           end, "Previous hunk")
-
-          -- Actions
-          map("n", "<leader>gs", gs.stage_hunk, "Stage hunk")
-          map("n", "<leader>gr", gs.reset_hunk, "Reset hunk")
-          map("v", "<leader>gs", function()
-            gs.stage_hunk({ vim.fn.line("."), vim.fn.line("v") })
-          end, "Stage hunk")
-          map("v", "<leader>gr", function()
-            gs.reset_hunk({ vim.fn.line("."), vim.fn.line("v") })
-          end, "Reset hunk")
-          map("n", "<leader>gS", gs.stage_buffer, "Stage buffer")
-          map("n", "<leader>gu", gs.undo_stage_hunk, "Undo stage hunk")
-          map("n", "<leader>gR", gs.reset_buffer, "Reset buffer")
-          map("n", "<leader>gp", gs.preview_hunk, "Preview hunk")
-          map("n", "<leader>gP", function()
-            gs.preview_hunk_inline()
-          end, "Preview inline hunk")
-          map("n", "<leader>gb", function()
-            gs.blame_line({ full = true })
-          end, "Blame line")
-          map("n", "<leader>gB", gs.toggle_current_line_blame, "Toggle blame line")
-          map("n", "<leader>gd", gs.diffthis, "Diff against index")
-          map("n", "<leader>gD", function()
-            gs.diffthis("~")
-          end, "Diff against previous commit")
 
           -- Text object
           map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", "Select hunk")
@@ -473,7 +390,7 @@ require("lazy").setup({
         separate_diagnostic_server = false,
         publish_diagnostic_on = "insert_leave",
         tsserver_max_memory = "auto",
-        expose_as_code_action = { "fix_all", "add_missing_imports" },
+        expose_as_code_action = { "fix_all", "add_missing_imports", "organize_imports" },
       },
     },
   },
@@ -512,20 +429,6 @@ require("lazy").setup({
       "nvim-telescope/telescope.nvim", -- optional
     },
     config = true,
-  },
-  {
-    "numToStr/Comment.nvim",
-    opts = {
-      padding = true,
-      extra = {
-        ---Add comment on the line above
-        above = "gcO",
-        ---Add comment on the line below
-        below = "gco",
-        ---Add comment at the end of line
-        eol = "gcA",
-      },
-    },
   },
   {
     "nvim-treesitter/nvim-treesitter",

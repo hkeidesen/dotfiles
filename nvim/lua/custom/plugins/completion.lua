@@ -4,7 +4,17 @@ return {
     version = "v0.13.0",
     dependencies = {
       "rafamadriz/friendly-snippets",
-      { "L3MON4D3/LuaSnip", version = "v2.*" },
+      { 
+        "L3MON4D3/LuaSnip", 
+        version = "v2.*",
+        config = function()
+          -- Load custom snippets
+          require("luasnip.loaders.from_lua").load({ paths = vim.fn.stdpath("config") .. "/snippets" })
+          
+          -- Load friendly-snippets
+          require("luasnip.loaders.from_vscode").lazy_load()
+        end
+      },
 
       -- NEW ▸ Copilot completion source
       "fang2hou/blink-copilot",

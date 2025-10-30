@@ -1,19 +1,7 @@
--- return {
---   "rose-pine/neovim",
---   name = "rose-pine",
---   config = function()
---     vim.cmd("colorscheme rose-pine")
---   end,
--- }
 return {
-  "neanias/everforest-nvim",
-  version = false,
-  lazy = false,
-  priority = 1000,
+  "rose-pine/neovim",
+  name = "rose-pine",
   config = function()
-    require("everforest").setup({
-      background = "hard",
-    })
-    vim.cmd("colorscheme everforest")
+    vim.cmd("colorscheme rose-pine")
   end,
 }
