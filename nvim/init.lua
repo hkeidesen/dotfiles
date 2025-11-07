@@ -1,12 +1,3 @@
-vim.api.nvim_create_autocmd("ColorScheme", {
-  pattern = "*",
-  callback = function()
-    vim.cmd([[
-      highlight StatusLine guibg=NONE ctermbg=NONE
-      highlight StatusLineNC guibg=NONE ctermbg=NONE
-    ]])
-  end,
-})
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 vim.g.have_nerd_font = true
@@ -22,6 +13,51 @@ vim.g.python3_host_prog = vim.fn.getcwd() .. "/.venv/bin/python"
 vim.schedule(function()
   vim.opt.clipboard = "unnamedplus"
 end)
+
+-- Unified transparency handling for all gutter-related highlight groups.
+-- We include sign column, line numbers, fold column, window separators, and diagnostic/git signs.
+local function make_gutters_transparent()
+  local function clear_bg(group)
+    local ok, hl = pcall(vim.api.nvim_get_hl, 0, { name = group })
+    if ok then
+      hl.bg = "NONE"
+      -- If the group is a link we need to break it by setting attributes explicitly.
+      hl.link = nil
+      vim.api.nvim_set_hl(0, group, hl)
+    end
+  end
+
+  -- Explicit groups we always want transparent.
+  local explicit = {
+    "SignColumn",
+    "LineNr",
+    "CursorLineNr",
+    "FoldColumn",
+    "StatusColumn", -- if provided by plugins (statuscol etc.)
+    "WinSeparator",
+    "EndOfBuffer",
+    "StatusLine",
+    "StatusLineNC",
+  }
+  for _, g in ipairs(explicit) do
+    clear_bg(g)
+  end
+
+  -- Iterate all highlight groups to catch dynamic ones (GitSigns*, DiagnosticSign*, Snacks*, etc.).
+  local all = vim.fn.getcompletion('', 'highlight')
+  for _, g in ipairs(all) do
+    if g:match('^GitSigns') or g:match('^DiagnosticSign') or g:match('^Snacks.*Sign') then
+      clear_bg(g)
+    end
+  end
+end
+
+vim.api.nvim_create_autocmd({ "ColorScheme", "VimEnter" }, {
+  group = vim.api.nvim_create_augroup("transparent-gutters", { clear = true }),
+  callback = function()
+    make_gutters_transparent()
+  end,
+})
 
 -- Enable break indent
 vim.opt.breakindent = true
@@ -226,14 +262,33 @@ require("lazy").setup({
           topdelete = { text = "‾" },
           changedelete = { text = "~" },
         },
+        -- Disable line highlighting for changes
+        linehl = false,
+        numhl = false,
+        word_diff = false,
         on_attach = function(bufnr)
+          -- Make gitsigns background transparent to match theme
+          vim.api.nvim_set_hl(0, "GitSignsAdd", { fg = vim.api.nvim_get_hl(0, { name = "GitSignsAdd" }).fg, bg = "NONE" })
+          vim.api.nvim_set_hl(0, "GitSignsChange", { fg = vim.api.nvim_get_hl(0, { name = "GitSignsChange" }).fg, bg = "NONE" })
+          vim.api.nvim_set_hl(0, "GitSignsDelete", { fg = vim.api.nvim_get_hl(0, { name = "GitSignsDelete" }).fg, bg = "NONE" })
+          vim.api.nvim_set_hl(0, "GitSignsTopdelete", { fg = vim.api.nvim_get_hl(0, { name = "GitSignsDelete" }).fg, bg = "NONE" })
+          vim.api.nvim_set_hl(0, "GitSignsChangedelete", { fg = vim.api.nvim_get_hl(0, { name = "GitSignsChange" }).fg, bg = "NONE" })
+          
+          vim.api.nvim_set_hl(0, "GitSignsAddLn", { bg = "NONE" })
+          vim.api.nvim_set_hl(0, "GitSignsChangeLn", { bg = "NONE" })
+          vim.api.nvim_set_hl(0, "GitSignsDeleteLn", { bg = "NONE" })
+          
+          -- Also make the sign column itself transparent
+          vim.api.nvim_set_hl(0, "SignColumn", { bg = "NONE" })
+
           local gs = require("gitsigns")
 
           local function map(mode, lhs, rhs, desc)
             vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, desc = desc })
           end
 
-          -- Navigation
+          -- Keep only essential navigation keybindings
+          -- All other git actions are accessed via <leader>g menu (fzf-lua)
           map("n", "]c", function()
             if vim.wo.diff then
               return "]c"
@@ -254,7 +309,7 @@ require("lazy").setup({
             return "<Ignore>"
           end, "Previous hunk")
 
-          -- Text object
+          -- Text object for operating on hunks
           map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", "Select hunk")
         end,
       })
@@ -383,18 +438,6 @@ require("lazy").setup({
   },
   { "Bilal2453/luvit-meta", lazy = true },
   {
-    "pmizio/typescript-tools.nvim",
-    dependencies = { "nvim-lua/plenary.nvim", "neovim/nvim-lspconfig" },
-    opts = {
-      settings = {
-        separate_diagnostic_server = false,
-        publish_diagnostic_on = "insert_leave",
-        tsserver_max_memory = "auto",
-        expose_as_code_action = { "fix_all", "add_missing_imports", "organize_imports" },
-      },
-    },
-  },
-  {
     "NvChad/nvim-colorizer.lua",
     event = "BufReadPre",
     opts = { -- set to setup table
@@ -499,20 +542,6 @@ require("lazy").setup({
     },
   },
 })
-
-vim.o.termguicolors = true
-vim.cmd([[
-  highlight DiffviewNormal guibg=#1e1e2e
-  highlight DiffviewCursorLine guibg=#313244
-]])
-vim.cmd([[ let &t_Cs = "\e[4:3m" ]])
-vim.cmd([[ let &t_Ce = "\e[4:0m" ]])
--- Squiggly line
-vim.cmd([[highlight DiagnosticUnderlineError        gui=undercurl guisp=#FF0000]])
-vim.cmd([[highlight DiagnosticUnderlineWarn         gui=undercurl guisp=#FFA500]])
-vim.cmd([[highlight DiagnosticUnderlineUnnecessary gui=undercurl guisp=#FFA500]])
-vim.cmd([[highlight DiagnosticUnderlineInfo         gui=undercurl guisp=#0000FF]])
-vim.cmd([[highlight DiagnosticUnderlineHint         gui=undercurl guisp=#808080]])
 
 local minimal_diagnostics = {
   virtual_text = {

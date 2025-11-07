@@ -40,6 +40,7 @@ return {
       end
       local EXCLUDES_FD = build_excludes_fd()
       local EXCLUDES_RG = build_excludes_rg()
+      
       return {
         _EXCLUDES_RG = EXCLUDES_RG,
         fzf_opts = {
@@ -57,6 +58,7 @@ return {
             "ctrl-d:preview-half-page-down",
             "ctrl-f:preview-page-down",
             "ctrl-b:preview-page-up",
+            "ctrl-q:select-all+accept",  -- Native fzf binding
           }, ","),
         },
         winopts = {
@@ -86,8 +88,7 @@ return {
           },
           actions = {
             ["default"] = actions.file_edit,
-            ["ctrl-q"] = { actions.file_sel_to_qf, actions.qf_open },
-            ["ctrl-l"] = { actions.file_sel_to_ll, actions.ll_open },
+            ["ctrl-q"] = actions.file_edit_or_qf,  -- Built-in action
           },
         },
         buffers = {
@@ -95,8 +96,7 @@ return {
           sort_lastused = true,
           actions = {
             ["default"] = actions.buf_edit,
-            ["ctrl-q"] = { actions.buf_sel_to_qf, actions.qf_open },
-            ["ctrl-l"] = { actions.buf_sel_to_ll, actions.ll_open },
+            ["ctrl-q"] = actions.file_edit_or_qf,  -- Built-in action
           },
         },
         oldfiles = {
@@ -104,8 +104,7 @@ return {
           include_current_session = true,
           actions = {
             ["default"] = actions.file_edit,
-            ["ctrl-q"] = { actions.file_sel_to_qf, actions.qf_open },
-            ["ctrl-l"] = { actions.file_sel_to_ll, actions.ll_open },
+            ["ctrl-q"] = actions.file_edit_or_qf,  -- Built-in action
           },
         },
         live_grep = {
@@ -121,9 +120,8 @@ return {
             EXCLUDES_RG,
           }, " "),
           actions = {
-            ["default"] = actions.file_edit,
-            ["ctrl-q"] = { actions.file_sel_to_qf, actions.qf_open },
-            ["ctrl-l"] = { actions.file_sel_to_ll, actions.ll_open },
+            ["default"] = actions.file_edit_or_qf,  -- Built-in action
+            ["ctrl-q"] = actions.file_edit_or_qf,   -- Built-in action
           },
         },
         grep = {
@@ -139,9 +137,8 @@ return {
             EXCLUDES_RG,
           }, " "),
           actions = {
-            ["default"] = actions.file_edit,
-            ["ctrl-q"] = { actions.file_sel_to_qf, actions.qf_open },
-            ["ctrl-l"] = { actions.file_sel_to_ll, actions.ll_open },
+            ["default"] = actions.file_edit_or_qf,  -- Built-in action
+            ["ctrl-q"] = actions.file_edit_or_qf,   -- Built-in action
           },
         },
         lsp = {
@@ -178,7 +175,7 @@ return {
             prompt = "Git Status> ",
             actions = {
               ["default"] = actions.file_edit,
-              ["ctrl-q"] = { actions.file_sel_to_qf, actions.qf_open },
+              ["ctrl-q"] = actions.file_edit_or_qf,  -- Built-in action
             },
           },
           commits = {
@@ -295,12 +292,12 @@ return {
                 "Alt-W: toggle whole-word [" .. (grep_state.whole_word and "ON" or "OFF") .. "]",
                 "Alt-F: set file filter " .. (grep_state.file_filter and "[SET]" or "[NONE]"),
                 "Alt-C: clear all filters",
+                "Ctrl-Q: send to quickfix",
               }, " | "),
             },
             actions = {
-              ["default"] = fzf.actions.file_edit,
-              ["ctrl-q"] = { fzf.actions.file_sel_to_qf, fzf.actions.qf_open },
-              ["ctrl-l"] = { fzf.actions.file_sel_to_ll, fzf.actions.ll_open },
+              ["default"] = fzf.actions.file_edit_or_qf,  -- Built-in action
+              ["ctrl-q"] = fzf.actions.file_edit_or_qf,   -- Built-in action
               ["alt-w"] = function()
                 grep_state.whole_word = not grep_state.whole_word
                 vim.notify("Whole word: " .. (grep_state.whole_word and "ON" or "OFF"), vim.log.levels.INFO)
@@ -332,7 +329,7 @@ return {
         end
 
         show_grep()
-      end, d("[F]ind [G]rep (Alt-W:word Alt-F:filter Alt-C:clear)"))
+      end, d("[F]ind [G]rep (Alt-W:word Alt-F:filter Alt-C:clear Ctrl-Q:quickfix)"))
 
       -- Quick word search (uses cursor word)
       map("n", "<leader>sw", fzf.grep_cword, d("[S]earch [W]ord under cursor"))
