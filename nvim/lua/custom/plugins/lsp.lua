@@ -25,7 +25,6 @@ return {
         "vtsls",        -- TypeScript language server (needed by vue_ls)
         "eslint",       -- JS/TS/Vue linting & code actions
         "cssls",        -- CSS/SCSS/Less
-        "tailwindcss",  -- Tailwind utility class IntelliSense
         "emmet_ls",     -- Emmet abbreviations
         "yamlls",       -- YAML (CI config, workflows)
         -- Vue (dynamic enable below)
@@ -111,9 +110,32 @@ return {
           end
           -- Use fzf-lua for definitions (jumps directly if only one, picker if multiple)
           map("gd", function()
+            -- First check if any LSP server supports definitions
+            local clients = vim.lsp.get_clients({ bufnr = 0 })
+            local has_definition_provider = false
+            for _, client in ipairs(clients) do
+              if client.server_capabilities.definitionProvider then
+                has_definition_provider = true
+                break
+              end
+            end
+            
+            if not has_definition_provider then
+              vim.notify("No LSP server with definition support attached", vim.log.levels.WARN)
+              return
+            end
+            
+            -- Try fzf-lua first, fall back to built-in on error
             local ok, fzf = pcall(require, "fzf-lua")
             if ok and fzf.lsp_definitions then
-              fzf.lsp_definitions({ jump1 = true })
+              local success, err = pcall(fzf.lsp_definitions, { 
+                jump1 = true,  -- Jump directly if only one result
+              })
+              if not success then
+                -- If fzf-lua fails, try built-in LSP
+                vim.notify("fzf-lua failed, using built-in LSP: " .. tostring(err), vim.log.levels.WARN)
+                vim.lsp.buf.definition()
+              end
             else
               vim.lsp.buf.definition()
             end
@@ -148,9 +170,11 @@ return {
         local info = {}
         for _, client in ipairs(clients) do
           local caps = client.server_capabilities
+          local root = client.config.root_dir or "unknown"
           table.insert(info, string.format(
-            "%s: refs=%s, def=%s, rename=%s, hover=%s",
+            "%s (root: %s):\n  refs=%s, def=%s, rename=%s, hover=%s",
             client.name,
+            vim.fn.fnamemodify(root, ":~"),
             caps.referencesProvider and "✓" or "✗",
             caps.definitionProvider and "✓" or "✗",
             caps.renameProvider and "✓" or "✗",
@@ -177,15 +201,33 @@ return {
         end
       end, { desc = "Restart basedpyright to reindex workspace" })
 
+      -- Force gopls to restart and rebuild package metadata
+      vim.api.nvim_create_user_command("LspReindexGo", function()
+        local clients = vim.lsp.get_clients({ name = "gopls" })
+        if #clients == 0 then
+          vim.notify("gopls not running", vim.log.levels.WARN)
+          return
+        end
+        for _, client in ipairs(clients) do
+          vim.notify("Restarting gopls to rebuild package metadata...", vim.log.levels.INFO)
+          client.stop()
+          vim.defer_fn(function()
+            vim.cmd("edit")  -- Trigger LSP attach
+            vim.notify("gopls restarted - building metadata...", vim.log.levels.INFO)
+          end, 1000)
+        end
+      end, { desc = "Restart gopls to rebuild package metadata" })
+
       -------------------------------------------------------------------------
       -- New API: use vim.lsp.config('name', overrides) then vim.lsp.enable('name')
       -- mason-lspconfig injects proper `cmd` so we don't need to set it manually.
       -------------------------------------------------------------------------
 
       vim.lsp.config("biome", {
+        enabled = false, -- Will be enabled conditionally per-file
         capabilities = caps,
         filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact", "json", "jsonc", "vue" },
-        root_dir = root_dir({ "biome.json", "package.json", ".git" }),
+        root_markers = { "biome.json" },
         on_attach = function(client)
           -- Disable definition-like providers to prevent duplicate results with tsserver
           client.server_capabilities.definitionProvider = false
@@ -194,6 +236,7 @@ return {
           client.server_capabilities.implementationProvider = false
         end,
       })
+      
       -- Utility: Deduplicate identical locations (same file + line + character)
       local function dedupe_locations(locations)
         local seen, out = {}, {}
@@ -287,8 +330,26 @@ return {
             analyses = { unusedparams = true, shadow = true },
             staticcheck = true,
             gofumpt = true,
+            -- Improve directory watching to avoid ENOENT errors
+            directoryFilters = {
+              "-**/node_modules",
+              "-**/.git",
+              "-**/vendor",
+              "-**/testdata",
+            },
           },
         },
+        flags = {
+          debounce_text_changes = 150,
+        },
+        on_attach = function(client, bufnr)
+          -- Notify when gopls is ready
+          vim.defer_fn(function()
+            if client.config.root_dir then
+              vim.notify("gopls attached at: " .. client.config.root_dir, vim.log.levels.INFO)
+            end
+          end, 100)
+        end,
       })
 
       -- jsonls
@@ -343,7 +404,7 @@ return {
       vim.lsp.config("vtsls", {
         capabilities = caps,
         filetypes = { "typescript", "typescriptreact", "javascript", "javascriptreact", "vue" },
-        root_dir = root_dir({ "package.json", "tsconfig.json", "jsconfig.json", ".git" }),
+        root_markers = { "jsconfig.json", "tsconfig.json", "package.json" },
         settings = {
           vtsls = {
             tsserver = {
@@ -370,18 +431,40 @@ return {
           javascript = {
             inlayHints = {
               parameterNames = { enabled = "all" },
-              parameterTypes = { enabled = true },
-              variableTypes = { enabled = true },
-              propertyDeclarationTypes = { enabled = true },
-              functionLikeReturnTypes = { enabled = true },
+              parameterTypes = { enabled = false },
+              variableTypes = { enabled = false },
+              propertyDeclarationTypes = { enabled = false },
+              functionLikeReturnTypes = { enabled = false },
               enumMemberValues = { enabled = true },
             },
           },
         },
         on_attach = function(client, bufnr)
-          -- Disable semantic tokens for Vue files to prevent conflicts with vue_ls
+          -- According to Vue.js official docs: disable semantic tokens for vtsls in Vue files
+          -- Since v3.0.5, semantic tokens are handled by vue_ls, not tsserver
           if vim.bo[bufnr].filetype == "vue" then
-            client.server_capabilities.semanticTokensProvider = nil
+            if client.server_capabilities.semanticTokensProvider then
+              client.server_capabilities.semanticTokensProvider.full = false
+            end
+          else
+            if client.server_capabilities.semanticTokensProvider then
+              client.server_capabilities.semanticTokensProvider.full = true
+            end
+          end
+          
+          -- Filter out TypeScript implicit any warnings (7006) for JS/Vue files
+          local original_handler = vim.lsp.handlers["textDocument/publishDiagnostics"]
+          vim.lsp.handlers["textDocument/publishDiagnostics"] = function(err, result, ctx, config)
+            if result and result.diagnostics then
+              local ft = vim.bo[bufnr].filetype
+              if ft == "javascript" or ft == "javascriptreact" or ft == "vue" then
+                -- Filter out diagnostic code 7006 (implicit any type)
+                result.diagnostics = vim.tbl_filter(function(diagnostic)
+                  return diagnostic.code ~= 7006
+                end, result.diagnostics)
+              end
+            end
+            original_handler(err, result, ctx, config)
           end
         end,
       })
@@ -400,29 +483,52 @@ return {
         },
       })
 
-      -- Vue 3 server (vue_ls) hybrid mode: handles templates; TS handled by typescript-tools
+      -- Vue 3 server (vue_ls) hybrid mode: handles templates; TS handled by vtsls
+      -- On Neovim 0.11+, hybrid mode is handled automatically when both vtsls and vue_ls are enabled
       vim.lsp.config("vue_ls", {
         capabilities = caps,
         enabled = false,
         filetypes = { "vue" },
-        -- Default cmd from lspconfig: { "vue-language-server", "--stdio" }
+        root_markers = { "package.json" },
       })
 
-
       -- Autocmd to enable correct Vue language server based on version
-      vim.api.nvim_create_autocmd("BufReadPre", {
+      vim.api.nvim_create_autocmd("FileType", {
         group = vim.api.nvim_create_augroup("vue_dynamic_lsp", { clear = true }),
-        pattern = "*.vue",
+        pattern = "vue",
         callback = function(ev)
           local root = root_dir({ "package.json", "pnpm-workspace.yaml", "yarn.lock", "node_modules", ".git" })
           local major = detect_vue_version(root) or 3 -- assume Vue3 if undetectable
+          
           if major < 3 then
             if not vim.lsp.get_clients({ name = "vuels", bufnr = ev.buf })[1] then
               vim.lsp.enable("vuels")
             end
           else
+            -- Enable vue_ls - Neovim 0.11's LSP system handles hybrid mode automatically
+            -- when both vtsls and vue_ls are enabled (no on_init needed)
             if not vim.lsp.get_clients({ name = "vue_ls", bufnr = ev.buf })[1] then
               vim.lsp.enable("vue_ls")
+            end
+          end
+        end,
+      })
+
+      -- Autocmd to enable biome only if biome.json exists in the project
+      vim.api.nvim_create_autocmd("FileType", {
+        group = vim.api.nvim_create_augroup("biome_conditional_lsp", { clear = true }),
+        pattern = { "javascript", "javascriptreact", "typescript", "typescriptreact", "json", "jsonc", "vue" },
+        callback = function(ev)
+          -- Check if biome.json exists upward from the current file
+          local fname = vim.api.nvim_buf_get_name(ev.buf)
+          if fname and fname ~= "" then
+            local found = vim.fs.find("biome.json", {
+              upward = true,
+              stop = vim.loop.os_homedir(),
+              path = vim.fs.dirname(fname)
+            })
+            if found[1] and not vim.lsp.get_clients({ name = "biome", bufnr = ev.buf })[1] then
+              vim.lsp.enable("biome")
             end
           end
         end,

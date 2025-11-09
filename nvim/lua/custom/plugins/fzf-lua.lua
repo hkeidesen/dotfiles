@@ -9,6 +9,7 @@ return {
     opts = function()
       local fzf = require("fzf-lua")
       local actions = fzf.actions
+      
       local EXCLUDES = {
         ".git",
         ".cache",
@@ -58,7 +59,6 @@ return {
             "ctrl-d:preview-half-page-down",
             "ctrl-f:preview-page-down",
             "ctrl-b:preview-page-up",
-            "ctrl-q:select-all+accept",  -- Native fzf binding
           }, ","),
         },
         winopts = {
@@ -88,7 +88,7 @@ return {
           },
           actions = {
             ["default"] = actions.file_edit,
-            ["ctrl-q"] = actions.file_edit_or_qf,  -- Built-in action
+            ["ctrl-q"] = actions.file_sel_to_qf,  -- Same as alt-q default
           },
         },
         buffers = {
@@ -96,7 +96,7 @@ return {
           sort_lastused = true,
           actions = {
             ["default"] = actions.buf_edit,
-            ["ctrl-q"] = actions.file_edit_or_qf,  -- Built-in action
+            ["ctrl-q"] = actions.file_sel_to_qf,
           },
         },
         oldfiles = {
@@ -104,7 +104,7 @@ return {
           include_current_session = true,
           actions = {
             ["default"] = actions.file_edit,
-            ["ctrl-q"] = actions.file_edit_or_qf,  -- Built-in action
+            ["ctrl-q"] = actions.file_sel_to_qf,
           },
         },
         live_grep = {
@@ -120,8 +120,8 @@ return {
             EXCLUDES_RG,
           }, " "),
           actions = {
-            ["default"] = actions.file_edit_or_qf,  -- Built-in action
-            ["ctrl-q"] = actions.file_edit_or_qf,   -- Built-in action
+            ["default"] = actions.file_edit_or_qf,
+            ["ctrl-q"] = actions.file_sel_to_qf,
           },
         },
         grep = {
@@ -137,8 +137,8 @@ return {
             EXCLUDES_RG,
           }, " "),
           actions = {
-            ["default"] = actions.file_edit_or_qf,  -- Built-in action
-            ["ctrl-q"] = actions.file_edit_or_qf,   -- Built-in action
+            ["default"] = actions.file_edit_or_qf,
+            ["ctrl-q"] = actions.file_sel_to_qf,
           },
         },
         lsp = {
@@ -175,7 +175,7 @@ return {
             prompt = "Git Status> ",
             actions = {
               ["default"] = actions.file_edit,
-              ["ctrl-q"] = actions.file_edit_or_qf,  -- Built-in action
+              ["ctrl-q"] = actions.file_sel_to_qf,
             },
           },
           commits = {
@@ -217,6 +217,14 @@ return {
 
       -- Register fzf-lua as the UI select handler for code actions
       fzf.register_ui_select()
+      
+      -- Auto-open quickfix list when it's populated by fzf
+      vim.api.nvim_create_autocmd("QuickFixCmdPost", {
+        pattern = "*",
+        callback = function()
+          vim.cmd("copen")
+        end,
+      })
 
       local map = vim.keymap.set
       local function d(s)
@@ -296,8 +304,13 @@ return {
               }, " | "),
             },
             actions = {
-              ["default"] = fzf.actions.file_edit_or_qf,  -- Built-in action
-              ["ctrl-q"] = fzf.actions.file_edit_or_qf,   -- Built-in action
+              ["default"] = fzf.actions.file_edit_or_qf,
+              ["ctrl-q"] = function(selected, opts)
+                fzf.actions.file_edit_or_qf(selected, opts)
+                vim.defer_fn(function()
+                  vim.cmd("copen")
+                end, 100)
+              end,
               ["alt-w"] = function()
                 grep_state.whole_word = not grep_state.whole_word
                 vim.notify("Whole word: " .. (grep_state.whole_word and "ON" or "OFF"), vim.log.levels.INFO)
