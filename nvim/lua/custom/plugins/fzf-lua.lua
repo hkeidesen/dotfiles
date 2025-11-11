@@ -9,7 +9,7 @@ return {
     opts = function()
       local fzf = require("fzf-lua")
       local actions = fzf.actions
-      
+
       local EXCLUDES = {
         ".git",
         ".cache",
@@ -41,7 +41,7 @@ return {
       end
       local EXCLUDES_FD = build_excludes_fd()
       local EXCLUDES_RG = build_excludes_rg()
-      
+
       return {
         _EXCLUDES_RG = EXCLUDES_RG,
         fzf_opts = {
@@ -88,7 +88,7 @@ return {
           },
           actions = {
             ["default"] = actions.file_edit,
-            ["ctrl-q"] = actions.file_sel_to_qf,  -- Same as alt-q default
+            ["ctrl-q"] = actions.file_sel_to_qf, -- Same as alt-q default
           },
         },
         buffers = {
@@ -217,7 +217,7 @@ return {
 
       -- Register fzf-lua as the UI select handler for code actions
       fzf.register_ui_select()
-      
+
       -- Auto-open quickfix list when it's populated by fzf
       vim.api.nvim_create_autocmd("QuickFixCmdPost", {
         pattern = "*",
@@ -716,3 +716,4 @@ return {
     end,
   },
 }
+
