@@ -1,23 +1,107 @@
-format = '''
-$character$directory$python$git_branch[✗](bold yellow) 
-'''
+# --- global ---
+add_newline = true
+command_timeout = 2000
+right_format = ""                # robbyrussell is left-only
 
-add_newline = false
+# --- palette (optional, safe to keep) ---
+palette = "melange"
+[palettes.melange]
+fg     = "#e6d3a3"
+muted  = "#8a8a8a"
+accent = "#a7c080"
+blue   = "#7fbbb3"
+orange = "#e39b7b"
+yellow = "#d3c28e"
+red    = "#e68183"
+purple = "#d699b6"
+bg     = "#1e1e1e"
 
-[character]
-success_symbol = "[➜](bold green)"
-error_symbol = "[➜](bold red)"
+# ----- prompt layout -----
+format = """$directory$git_branch$git_status$git_state$python$nodejs$golang$docker_context$kubernetes$character"""
 
+# ----- directory: show just the current folder -----
 [directory]
-format = "[$path]($style)[$read_only]($read_only_style) "
 truncation_length = 1
-style = "bold fg:#227B94"
-read_only = ":read_only"
-read_only_style = "bold yellow"
+truncate_to_repo = false
+style = "bold fg:blue"                 # cyan/blueish dir like robbyrussell
+format = "[$path]($style) "
 
+# ----- git: 'git:(branch)' -----
 [git_branch]
-format = '[git:(\([$branch](bold fg:#A6E22E)\))(\([$remote_branch](bold #FD971F)\))](bold fg:#66D9EF) '
+symbol = ""                             # we'll print 'git:' ourselves
+style = "fg:red"                        # robbyrussell-ish branch color
+format = "[git:](fg:blue)[($branch)]($style) "
 
+# Optional: show tag on detached HEAD
+[git_commit]
+only_detached = true
+tag_disabled = false
+style = "fg:purple"
+format = "[( $tag )]($style)"
+
+# Dirty mark + ahead/behind compact like robbyrussell
+[git_status]
+style = "fg:red"
+conflicted = "!"
+stashed = "S"
+staged = "+"
+modified = "*"
+renamed = "»"
+deleted = "x"
+ahead = " ⇡${count}"
+behind = " ⇣${count}"
+diverged = " ⇕${ahead_count}/${behind_count}"
+# no brackets, just append marks if present
+format = "[$modified$staged$deleted$conflicted$ahead_behind]($style) "
+
+[git_state]
+style = "fg:orange"
+format = "([$state( $progress_current/$progress_total)]($style)) "
+
+# ----- runtimes (kept minimal) -----
 [python]
-format = '[🐍 $virtualenv]($style) '
-style  = 'bold fg:#FFD343'
+symbol = " "
+style = "fg:yellow"
+detect_extensions = ["py"]
+detect_files = ["pyproject.toml","requirements.txt","Pipfile","manage.py"]
+format = "[$symbol$virtualenv]($style) "
+
+[nodejs]
+symbol = " "
+style = "fg:accent"
+detect_files = ["package.json","pnpm-lock.yaml","bun.lockb","tsconfig.json"]
+format = "[$symbol($version )]($style)"
+
+[golang]
+symbol = " "
+style = "fg:accent"
+format = "[$symbol($version )]($style)"
+
+[docker_context]
+symbol = " "
+style = "fg:blue"
+only_with_files = false
+format = "[$symbol$context]($style) "
+
+[kubernetes]
+symbol = "☸ "
+style = "fg:purple"
+disabled = false
+detect_env_vars = ["KUBECONFIG","STARSHIP_KUBECONTEXT"]
+format = '[$symbol($context\($namespace\))]($style) '
+contexts = [
+  { context_pattern = "prod.*",    style = "bold fg:red",    context_alias = "prod" },
+  { context_pattern = "staging.*", style = "bold fg:orange", context_alias = "stg"  },
+  { context_pattern = "dev.*",     style = "fg:accent",      context_alias = "dev"  },
+]
+
+# ----- character: show yellow ✗ only on failure -----
+[character]
+success_symbol = "[❯](bold fg:accent) "
+error_symbol   = "[✗](fg:yellow) "
+vicmd_symbol   = "[❮](fg:blue) "
+format = "$symbol"
+
+# (Extras you had – disabled by default)
+[cmd_duration]  # robbyrussell doesn't show this, enable if you miss it
+min_time = 999999 # effectively off

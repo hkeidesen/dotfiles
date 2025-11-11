@@ -4,10 +4,23 @@ return {
     version = "v0.13.0",
     dependencies = {
       "rafamadriz/friendly-snippets",
-      { "L3MON4D3/LuaSnip", version = "v2.*" },
+      { 
+        "L3MON4D3/LuaSnip", 
+        version = "v2.*",
+        config = function()
+          -- Load custom snippets
+          require("luasnip.loaders.from_lua").load({ paths = vim.fn.stdpath("config") .. "/snippets" })
+          
+          -- Load friendly-snippets
+          require("luasnip.loaders.from_vscode").lazy_load()
+        end
+      },
 
       -- NEW ▸ Copilot completion source
       "fang2hou/blink-copilot",
+      
+      -- NEW ▸ Words completion source
+      "archie-judd/blink-cmp-words",
     },
 
     ---@type blink.cmp.Config
@@ -21,22 +34,28 @@ return {
         accept = { auto_brackets = { enabled = true } },
         documentation = { auto_show = true, auto_show_delay_ms = 200 },
         ghost_text = { enabled = false },
+        trigger = { 
+          show_on_insert_on_trigger_character = true,
+          show_on_keyword = true,
+        },
+        menu = { auto_show = true },
       },
       signature = { enabled = true },
       fuzzy = { implementation = "prefer_rust_with_warning" },
       snippets = { preset = "luasnip" },
 
-      -- 👉 Add Copilot to the default sources
       sources = {
-        default = { "lsp", "copilot", "path", "snippets", "buffer" },
-
-        -- 👉 Tell blink how to talk to Copilot
+        default = { "lsp", "copilot", "path", "snippets", "buffer", "nvim-px-to-rem" },
         providers = {
+          ["nvim-px-to-rem"] = {
+            module = "nvim-px-to-rem.integrations.blink",
+            name = "nvim-px-to-rem",
+          },
           copilot = {
             name = "Copilot",
             module = "blink-copilot",
             async = true,
-            score_offset = 120, -- lift Copilot suggestions near the top
+            score_offset = 120,
           },
         },
       },
