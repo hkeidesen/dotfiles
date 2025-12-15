@@ -229,6 +229,25 @@ vim.api.nvim_create_autocmd("TextYankPost", {
     vim.highlight.on_yank()
   end,
 })
+
+vim.api.nvim_create_autocmd("BufWritePre", {
+  pattern = "*.go",
+  callback = function()
+    local params = vim.lsp.util.make_range_params()
+    params.context = {only = {"source.organizeImports"}}
+    local result = vim.lsp.buf_request_sync(0, "textDocument/codeAction", params)
+    for cid, res in pairs(result or {}) do
+      for _, r in pairs(res.result or {}) do
+        if r.edit then
+          local enc = (vim.lsp.get_client_by_id(cid) or {}).offset_encoding or "utf-16"
+          vim.lsp.util.apply_workspace_edit(r.edit, enc)
+        end
+      end
+    end
+    vim.lsp.buf.format({async = false})
+  end
+})
+
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
   local lazyrepo = "https://github.com/folke/lazy.nvim.git"
@@ -249,72 +268,8 @@ end
 
 require("lazy").setup({
   { import = "custom/plugins" },
+  { import = "kickstart/plugins" },
   "tpope/vim-sleuth",
-  {
-    "lewis6991/gitsigns.nvim",
-    config = function()
-      require("gitsigns").setup({
-        current_line_blame = true,
-        signs = {
-          add = { text = "+" },
-          change = { text = "~" },
-          delete = { text = "x" },
-          topdelete = { text = "‾" },
-          changedelete = { text = "~" },
-        },
-        -- Disable line highlighting for changes
-        linehl = false,
-        numhl = false,
-        word_diff = false,
-        on_attach = function(bufnr)
-          -- Make gitsigns background transparent to match theme
-          vim.api.nvim_set_hl(0, "GitSignsAdd", { fg = vim.api.nvim_get_hl(0, { name = "GitSignsAdd" }).fg, bg = "NONE" })
-          vim.api.nvim_set_hl(0, "GitSignsChange", { fg = vim.api.nvim_get_hl(0, { name = "GitSignsChange" }).fg, bg = "NONE" })
-          vim.api.nvim_set_hl(0, "GitSignsDelete", { fg = vim.api.nvim_get_hl(0, { name = "GitSignsDelete" }).fg, bg = "NONE" })
-          vim.api.nvim_set_hl(0, "GitSignsTopdelete", { fg = vim.api.nvim_get_hl(0, { name = "GitSignsDelete" }).fg, bg = "NONE" })
-          vim.api.nvim_set_hl(0, "GitSignsChangedelete", { fg = vim.api.nvim_get_hl(0, { name = "GitSignsChange" }).fg, bg = "NONE" })
-          
-          vim.api.nvim_set_hl(0, "GitSignsAddLn", { bg = "NONE" })
-          vim.api.nvim_set_hl(0, "GitSignsChangeLn", { bg = "NONE" })
-          vim.api.nvim_set_hl(0, "GitSignsDeleteLn", { bg = "NONE" })
-          
-          -- Also make the sign column itself transparent
-          vim.api.nvim_set_hl(0, "SignColumn", { bg = "NONE" })
-
-          local gs = require("gitsigns")
-
-          local function map(mode, lhs, rhs, desc)
-            vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, desc = desc })
-          end
-
-          -- Keep only essential navigation keybindings
-          -- All other git actions are accessed via <leader>g menu (fzf-lua)
-          map("n", "]c", function()
-            if vim.wo.diff then
-              return "]c"
-            end
-            vim.schedule(function()
-              gs.next_hunk()
-            end)
-            return "<Ignore>"
-          end, "Next hunk")
-
-          map("n", "[c", function()
-            if vim.wo.diff then
-              return "[c"
-            end
-            vim.schedule(function()
-              gs.prev_hunk()
-            end)
-            return "<Ignore>"
-          end, "Previous hunk")
-
-          -- Text object for operating on hunks
-          map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", "Select hunk")
-        end,
-      })
-    end,
-  },
   {
     "folke/which-key.nvim",
     event = "VeryLazy",
@@ -567,7 +522,11 @@ local detailed_diagnostics = {
       min = vim.diagnostic.severity.ERROR,
     },
   },
-  underline = true,
+  underline = {
+    severity = {
+      min = vim.diagnostic.severity.ERROR,
+    },
+  },
   update_in_insert = false,
 }
 
@@ -587,6 +546,31 @@ vim.api.nvim_create_autocmd("ColorScheme", {
     vim.cmd([[
       highlight StatusLine guibg=NONE ctermbg=NONE
       highlight StatusLineNC guibg=NONE ctermbg=NONE
+      highlight DiagnosticUnderlineError guisp=#994444 gui=undercurl cterm=underline
+      highlight DiagnosticUnderlineWarn guisp=Orange gui=undercurl cterm=underline
+      highlight DiagnosticUnderlineInfo guisp=Blue gui=undercurl cterm=underline
+      highlight DiagnosticUnderlineHint guisp=Grey gui=undercurl cterm=underline
+      highlight DiagnosticUnnecessary guisp=#994444 gui=undercurl cterm=underline
     ]])
   end,
+})
+
+vim.cmd([[
+  highlight DiagnosticUnderlineError guisp=#994444 gui=undercurl cterm=underline
+  highlight DiagnosticUnderlineWarn guisp=Orange gui=undercurl cterm=underline
+  highlight DiagnosticUnderlineInfo guisp=Blue gui=undercurl cterm=underline
+  highlight DiagnosticUnderlineHint guisp=Grey gui=undercurl cterm=underline
+  highlight DiagnosticUnnecessary guisp=#994444 gui=undercurl cterm=underline
+]])
+
+-- Hide diagnostic signs completely to not interfere with gitsigns
+vim.diagnostic.config({
+  signs = {
+    text = {
+      [vim.diagnostic.severity.ERROR] = "",
+      [vim.diagnostic.severity.WARN] = "",
+      [vim.diagnostic.severity.INFO] = "",
+      [vim.diagnostic.severity.HINT] = "",
+    },
+  },
 })

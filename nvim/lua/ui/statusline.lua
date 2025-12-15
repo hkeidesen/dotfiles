@@ -36,17 +36,15 @@ for k, v in pairs(HL) do
 end
 
 local ORDER = {
-  "pad",
   "path",
   "venv",
+  "gotest",
   "mod",
   "ro",
   "sep",
   "diag",
   "fileinfo",
-  "pad",
   "scrollbar",
-  "pad",
 }
 
 local PAD, SEP = " ", "%="
@@ -64,7 +62,7 @@ local function concat(parts)
       i = i + 1
     end
   end
-  return table.concat(out, " ")
+  return " " .. table.concat(out, "  ") .. " "
 end
 
 local function esc_str(str)
@@ -162,7 +160,7 @@ local function path_widget(root, fname)
     repo_info = ""
   end
 
-  return repo_info .. ICON.file .. " " .. dir_path .. path .. " "
+  return repo_info .. ICON.file .. " " .. dir_path .. path
 end
 
 local function diagnostics_widget()
@@ -183,7 +181,7 @@ local function diagnostics_widget()
   local err = string.format("%-3d", count_for(vim.diagnostic.severity.ERROR))
   local warn = string.format("%-3d", count_for(vim.diagnostic.severity.WARN))
   return string.format(
-    "%s %s  %s %s  ",
+    "%s %s %s %s",
     ICON.error,
     tools.hl_str("DiagnosticError", err),
     ICON.warn,
@@ -208,7 +206,7 @@ local function fileinfo_widget()
   local vlines = math.abs(fn.line(".") - fn.line("v")) + 1
   return str
     .. string.format(
-      "%3s lines %3s words  %3s chars",
+      "%3s lines %3s words %3s chars",
       tools.group_number(vlines, ","),
       tools.group_number(wc.visual_words, ","),
       tools.group_number(wc.visual_chars, ",")
@@ -221,13 +219,26 @@ local function venv_widget()
   end
   local env = vim.env.VIRTUAL_ENV
   if env and env ~= "" then
-    return tools.hl_str("Comment", string.format("[.venv: %s]  ", fn.fnamemodify(env, ":t")))
+    return tools.hl_str("Comment", string.format("[.venv: %s]", fn.fnamemodify(env, ":t")))
   end
   env = vim.env.CONDA_DEFAULT_ENV
   if env and env ~= "" then
-    return tools.hl_str("Comment", string.format("[conda: %s]  ", env))
+    return tools.hl_str("Comment", string.format("[conda: %s]", env))
   end
-  return tools.hl_str("Comment", "[no venv]")
+  return ""
+end
+
+local function go_test_widget()
+  if bo.filetype ~= "go" then
+    return ""
+  end
+
+  local status = vim.g.go_test_status
+  if status and status ~= "" then
+    return status
+  end
+
+  return ""
 end
 
 local function scrollbar_widget()
@@ -251,10 +262,10 @@ function M.render()
   local buf = api.nvim_win_get_buf(vim.g.statusline_winid)
 
   local parts = {
-    pad = PAD,
     path = path_widget(root, fname),
     venv = venv_widget(),
-    mod = get_opt("modifiable", { buf = buf }) and (get_opt("modified", { buf = buf }) and ICON.modified or " ")
+    gotest = go_test_widget(),
+    mod = get_opt("modifiable", { buf = buf }) and (get_opt("modified", { buf = buf }) and ICON.modified or "")
       or ICON.nomodifiable,
     ro = get_opt("readonly", { buf = buf }) and ICON.readonly or "",
     sep = SEP,

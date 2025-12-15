@@ -38,7 +38,7 @@ yabai -m config mouse_action2 resize
 # -------------
 # Common rules (float/unmanage some apps)
 # -------------
-for app in "System Settings" "Finder" "Preview" "Music" "1Password" "Messages" "Session" "Raycast"; do
+for app in "System Settings" "Finder" "Preview" "Music" "1Password" "Messages" "Session" "Raycast" "Google Chrome for Testing"; do
   yabai -m rule --add app="^$app$" manage=off
 done
 
