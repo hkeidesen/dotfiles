@@ -10,8 +10,8 @@ return {
         hide_during_completion = true,
         debounce = 75,
         keymap = {
-          accept = "<Tab>",
-          accept_word = false,
+          accept = "<Tab>",  -- Use Tab instead of C-y (which is for blink.cmp)
+          accept_word = "<C-Right>",
           accept_line = false,
           next = "<M-]>",
           prev = "<M-[>",
