@@ -32,10 +32,26 @@ return {
         ),
       }
 
+      local function current_filename()
+        local name = vim.api.nvim_buf_get_name(0)
+        if name == nil or name == "" then
+          return vim.fn.expand("%:p")
+        end
+        if name:match("^oil://") then
+          -- Convert URI-like buffer names (from oil.nvim) to real file paths
+          local ok, fname = pcall(vim.uri_to_fname, name)
+          if ok and fname and fname ~= "" then
+            return fname
+          end
+        end
+        return name
+      end
+
       lint.linters.ruff = {
-        exe = "ruff",
-        args = { "--stdin-filename", vim.fn.expand("%:p"), "-" },
+        cmd = "ruff",
+        args = { "check", "--stdin-filename", current_filename, "-" },
         stdin = true,
+        stream = "stdout",
       }
 
       lint.linters_by_ft = {

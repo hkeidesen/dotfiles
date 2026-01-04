@@ -69,6 +69,11 @@ return {
       config.defaults.actions.files["ctrl-q"] = actions.file_sel_to_qf
 
       return {
+        fzf_colors = {
+          true, -- auto generate rest of fzf's highlights
+          bg = "-1",
+          gutter = "-1",
+        },
         fzf_opts = {
           ["--layout"] = "reverse",
           ["--height"] = "96%",
@@ -134,11 +139,7 @@ return {
       map("n", "<leader>:", fzf.command_history, { desc = "Command history" })
 
       -- Buffer management
-      map("n", "<leader>bb", function()
-        if not pcall(vim.cmd, "b#") then
-          fzf.buffers()
-        end
-      end, { desc = "Switch to last buffer" })
+      map("n", "<leader>bb", "<cmd>b#<CR>", { desc = "Previous buffer" })
       map("n", "<leader>bd", "<cmd>bd<CR>", { desc = "Delete buffer" })
 
       -- Quickfix

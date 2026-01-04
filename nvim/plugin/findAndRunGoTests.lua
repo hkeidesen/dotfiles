@@ -8,31 +8,30 @@ local function find_test_file()
     return nil
   end
   
+  -- If we're already in a test file, return it
+  if current_file:match("_test%.go$") then
+    return current_file
+  end
+  
   local file_dir = vim.fn.fnamemodify(current_file, ":h")
+  local file_name = vim.fn.fnamemodify(current_file, ":t")
   
   -- Check if directory exists
   if vim.fn.isdirectory(file_dir) == 0 then
     return nil
   end
 
-  -- Look for any *_test.go or *test.go files in the same directory as the current file
-  local test_files = {}
-  local ok, files = pcall(vim.fn.readdir, file_dir)
-  if not ok or not files then
-    return nil
-  end
+  -- Get the base name without .go extension
+  local base_name = file_name:gsub("%.go$", "")
   
-  for _, file in ipairs(files) do
-    if file:match("_test%.go$") or file:match("test%.go$") then
-      table.insert(test_files, file_dir .. "/" .. file)
-    end
+  -- Look for the corresponding test file: <basename>_test.go
+  local corresponding_test = file_dir .. "/" .. base_name .. "_test.go"
+  
+  if vim.fn.filereadable(corresponding_test) == 1 then
+    return corresponding_test
   end
 
-  -- Return the first test file found, or nil if none exist
-  if #test_files > 0 then
-    return test_files[1]
-  end
-
+  -- No corresponding test file found
   return nil
 end
 
@@ -142,9 +141,12 @@ local function run_relevant_go_test()
     end
   end
 
+  -- Get just the filename for the test file
+  local test_filename = vim.fn.fnamemodify(test_file, ":t")
+  
   local handle
   handle = vim.loop.spawn("go", {
-    args = { "test", "-v", "." },
+    args = { "test", "-v", test_filename },
     cwd = file_dir,
     stdio = { nil, stdout, stderr },
   }, function(code)
