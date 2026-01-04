@@ -44,9 +44,9 @@ local function make_gutters_transparent()
   end
 
   -- Iterate all highlight groups to catch dynamic ones (GitSigns*, DiagnosticSign*, Snacks*, etc.).
-  local all = vim.fn.getcompletion('', 'highlight')
+  local all = vim.fn.getcompletion("", "highlight")
   for _, g in ipairs(all) do
-    if g:match('^GitSigns') or g:match('^DiagnosticSign') or g:match('^Snacks.*Sign') then
+    if g:match("^GitSigns") or g:match("^DiagnosticSign") or g:match("^Snacks.*Sign") then
       clear_bg(g)
     end
   end
@@ -234,7 +234,7 @@ vim.api.nvim_create_autocmd("BufWritePre", {
   pattern = "*.go",
   callback = function()
     local params = vim.lsp.util.make_range_params()
-    params.context = {only = {"source.organizeImports"}}
+    params.context = { only = { "source.organizeImports" } }
     local result = vim.lsp.buf_request_sync(0, "textDocument/codeAction", params)
     for cid, res in pairs(result or {}) do
       for _, r in pairs(res.result or {}) do
@@ -244,8 +244,8 @@ vim.api.nvim_create_autocmd("BufWritePre", {
         end
       end
     end
-    vim.lsp.buf.format({async = false})
-  end
+    vim.lsp.buf.format({ async = false })
+  end,
 })
 
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
@@ -407,28 +407,6 @@ require("lazy").setup({
     opts = { signs = true },
   },
   {
-    "NeogitOrg/neogit",
-    dependencies = {
-      "nvim-lua/plenary.nvim", -- required
-      {
-        "sindrets/diffview.nvim",
-        config = function()
-          vim.keymap.set("n", "<leader>gd", function()
-            toggle_diffview("DiffviewOpen")
-          end, { desc = "Diff Index" })
-          vim.keymap.set("n", "<leader>gD", function()
-            toggle_diffview("DiffviewOpen master..HEAD")
-          end, { desc = "Diff master" })
-          vim.keymap.set("n", "<leader>gf", function()
-            toggle_diffview("DiffviewFileHistory %")
-          end, { desc = "Open diffs for current File" })
-        end,
-      },
-      "nvim-telescope/telescope.nvim", -- optional
-    },
-    config = true,
-  },
-  {
     "nvim-treesitter/nvim-treesitter",
     build = ":TSUpdate",
     main = "nvim-treesitter.configs",
@@ -524,7 +502,7 @@ local detailed_diagnostics = {
   },
   underline = {
     severity = {
-      min = vim.diagnostic.severity.ERROR,
+      min = vim.diagnostic.severity.WARN, -- Show underlines for warnings and above (including typos)
     },
   },
   update_in_insert = false,

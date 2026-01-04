@@ -125,6 +125,14 @@ return {
       })
       vim.lsp.enable("gopls")
 
+      -- Configure typos_lsp to report typos as warnings
+      vim.lsp.config("typos_lsp", {
+        init_options = {
+          diagnosticSeverity = "Warning", -- Report typos as warnings instead of errors
+        },
+      })
+      vim.lsp.enable("typos_lsp")
+
       local util = require("lspconfig.util")
       local vue_language_server_path = vim.fn.stdpath("data")
         .. "/mason/packages/vue-language-server/node_modules/@vue/language-server"
