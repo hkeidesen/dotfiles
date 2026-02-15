@@ -2,20 +2,20 @@
 
 local function find_test_file()
   local current_file = vim.fn.expand("%:p")
-  
+
   -- Skip if no file or not a regular file
   if current_file == "" or vim.fn.filereadable(current_file) == 0 then
     return nil
   end
-  
+
   -- If we're already in a test file, return it
   if current_file:match("_test%.go$") then
     return current_file
   end
-  
+
   local file_dir = vim.fn.fnamemodify(current_file, ":h")
   local file_name = vim.fn.fnamemodify(current_file, ":t")
-  
+
   -- Check if directory exists
   if vim.fn.isdirectory(file_dir) == 0 then
     return nil
@@ -23,10 +23,10 @@ local function find_test_file()
 
   -- Get the base name without .go extension
   local base_name = file_name:gsub("%.go$", "")
-  
+
   -- Look for the corresponding test file: <basename>_test.go
   local corresponding_test = file_dir .. "/" .. base_name .. "_test.go"
-  
+
   if vim.fn.filereadable(corresponding_test) == 1 then
     return corresponding_test
   end
@@ -43,7 +43,7 @@ local function run_relevant_go_test()
   if current_file == "" or vim.fn.filereadable(current_file) == 0 then
     return
   end
-  
+
   local test_file = find_test_file()
 
   if not test_file then
@@ -143,10 +143,11 @@ local function run_relevant_go_test()
 
   -- Get just the filename for the test file
   local test_filename = vim.fn.fnamemodify(test_file, ":t")
-  
+
   local handle
   handle = vim.loop.spawn("go", {
-    args = { "test", "-v", test_filename },
+    args = { "test", "-v", "." },
+    -- args = { "test", "-v", test_filename },
     cwd = file_dir,
     stdio = { nil, stdout, stderr },
   }, function(code)

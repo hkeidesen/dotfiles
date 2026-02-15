@@ -14,7 +14,9 @@ return {
         args = {
           "--stdin",
           "--stdin-filename",
-          function() return vim.api.nvim_buf_get_name(0) end,
+          function()
+            return vim.api.nvim_buf_get_name(0)
+          end,
         },
         stream = "stdout",
         ignore_exitcode = true, -- markdownlint exits 1 when it finds issues
@@ -32,44 +34,31 @@ return {
         ),
       }
 
-      local function current_filename()
-        local name = vim.api.nvim_buf_get_name(0)
-        if name == nil or name == "" then
-          return vim.fn.expand("%:p")
-        end
-        if name:match("^oil://") then
-          -- Convert URI-like buffer names (from oil.nvim) to real file paths
-          local ok, fname = pcall(vim.uri_to_fname, name)
-          if ok and fname and fname ~= "" then
-            return fname
-          end
-        end
-        return name
-      end
-
-      lint.linters.ruff = {
-        cmd = "ruff",
-        args = { "check", "--stdin-filename", current_filename, "-" },
-        stdin = true,
-        stream = "stdout",
-      }
-
       lint.linters_by_ft = {
         markdown = { "markdownlint-cli2" },
         python = { "ruff" },
+        go = { "golangcilint" },
       }
+
+      lint.linters.golangcilint = vim.tbl_deep_extend("force", lint.linters.golangcilint or {}, {
+        ignore_exitcode = true,
+      })
 
       local aug = vim.api.nvim_create_augroup("lint", { clear = true })
       vim.api.nvim_create_autocmd({ "BufWritePost", "InsertLeave" }, {
         group = aug,
-        callback = function() lint.try_lint() end,
+        callback = function()
+          lint.try_lint()
+        end,
       })
       -- Optional: also lint when opening a buffer
       vim.api.nvim_create_autocmd("BufEnter", {
         group = aug,
         callback = function()
           -- Only lint real files (not help/quickfix/etc.)
-          if vim.fn.expand("%:p") ~= "" then lint.try_lint() end
+          if vim.fn.expand("%:p") ~= "" then
+            lint.try_lint()
+          end
         end,
       })
     end,

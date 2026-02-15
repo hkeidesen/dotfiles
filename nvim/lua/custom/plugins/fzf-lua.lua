@@ -69,26 +69,54 @@ return {
       config.defaults.actions.files["ctrl-q"] = actions.file_sel_to_qf
 
       return {
-        fzf_colors = {
-          true, -- auto generate rest of fzf's highlights
-          bg = "-1",
-          gutter = "-1",
-        },
+        fzf_colors = true,
         fzf_opts = {
-          ["--layout"] = "reverse",
-          ["--height"] = "96%",
-          ["--border"] = "rounded",
+          ["--no-scrollbar"] = true,
         },
-        winopts = { preview = { default = "builtin" } },
+        winopts = {
+          height = 0.85,
+          width = 0.80,
+          border = "single",
+          backdrop = 100,
+          preview = {
+            default = "builtin",
+            border = "single",
+            title = false,
+            scrollbar = false,
+          },
+        },
         files = {
           prompt = "Files> ",
           fd_opts = "--color=never --type f --hidden --follow " .. build_fd_excludes(),
+          fzf_opts = {
+            ["--history"] = vim.fn.stdpath("data") .. "/fzf-lua-files-history",
+          },
         },
         buffers = { prompt = "Buffers> ", sort_lastused = true },
         oldfiles = { prompt = "Recent> ", include_current_session = true },
-        live_grep = { prompt = "Grep> ", rg_opts = RG_OPTS },
-        grep = { prompt = "Grep> ", rg_opts = RG_OPTS },
+        live_grep = {
+          prompt = "Grep> ",
+          rg_opts = RG_OPTS,
+          rg_glob = true,
+          glob_flag = "--iglob",
+          glob_separator = "%s%-%-",
+          fzf_opts = {
+            ["--history"] = vim.fn.stdpath("data") .. "/fzf-lua-grep-history",
+          },
+        },
+        grep = {
+          prompt = "Grep> ",
+          rg_opts = RG_OPTS,
+          rg_glob = true,
+          glob_flag = "--iglob",
+          glob_separator = "%s%-%-",
+          fzf_opts = {
+            ["--history"] = vim.fn.stdpath("data") .. "/fzf-lua-grep-history",
+          },
+        },
         lsp = {
+          prompt_postfix = "> ",
+          cwd_header = false,
           code_actions = {
             prompt = "Code Actions> ",
             ui_select = true,
@@ -139,7 +167,6 @@ return {
       map("n", "<leader>:", fzf.command_history, { desc = "Command history" })
 
       -- Buffer management
-      map("n", "<leader>bb", "<cmd>b#<CR>", { desc = "Previous buffer" })
       map("n", "<leader>bd", "<cmd>bd<CR>", { desc = "Delete buffer" })
 
       -- Quickfix

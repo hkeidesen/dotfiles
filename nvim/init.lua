@@ -1,6 +1,7 @@
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 vim.g.have_nerd_font = true
+vim.o.exrc = true
 
 vim.opt.number = true
 vim.opt.relativenumber = true
@@ -70,7 +71,7 @@ vim.opt.ignorecase = true
 vim.opt.smartcase = true
 
 -- Keep signcolumn on by default
-vim.opt.signcolumn = "yes"
+vim.opt.signcolumn = "yes:2"
 
 -- Decrease update time
 vim.opt.updatetime = 250
@@ -158,6 +159,9 @@ vim.keymap.set(
   { noremap = true, silent = true, desc = "Close all buffers but keep current" }
 )
 
+-- Buffer management
+vim.keymap.set("n", "<leader>bb", "<cmd>b#<CR>", { desc = "Previous buffer" })
+
 -- Preview substitutions live, as you type!
 vim.opt.inccommand = "split"
 
@@ -233,9 +237,16 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 vim.api.nvim_create_autocmd("BufWritePre", {
   pattern = "*.go",
   callback = function()
-    local params = vim.lsp.util.make_range_params()
+    local client = vim.lsp.get_clients({ bufnr = 0 })[1]
+    if not client then
+      return
+    end
+
+    local params = vim.lsp.util.make_range_params(nil, client.offset_encoding)
     params.context = { only = { "source.organizeImports" } }
+
     local result = vim.lsp.buf_request_sync(0, "textDocument/codeAction", params)
+
     for cid, res in pairs(result or {}) do
       for _, r in pairs(res.result or {}) do
         if r.edit then
@@ -244,6 +255,7 @@ vim.api.nvim_create_autocmd("BufWritePre", {
         end
       end
     end
+
     vim.lsp.buf.format({ async = false })
   end,
 })
@@ -338,7 +350,7 @@ require("lazy").setup({
     init = function()
       vim.o.foldcolumn = "1"
       vim.o.foldlevel = 99
-      vim.o.foldlevelstart = 999
+      vim.o.foldlevelstart = 99
       vim.o.foldenable = true
     end,
     opts = {
@@ -502,7 +514,7 @@ local detailed_diagnostics = {
   },
   underline = {
     severity = {
-      min = vim.diagnostic.severity.WARN, -- Show underlines for warnings and above (including typos)
+      min = vim.diagnostic.severity.HINT,
     },
   },
   update_in_insert = false,
@@ -518,6 +530,7 @@ vim.keymap.set("n", "gK", function()
 end, { desc = "Toggle diagnostic virtual_lines" })
 
 require("ui.statusline")
+require("ui.glanceClaudePlan")
 vim.api.nvim_create_autocmd("ColorScheme", {
   pattern = "*",
   callback = function()
@@ -541,14 +554,38 @@ vim.cmd([[
   highlight DiagnosticUnnecessary guisp=#994444 gui=undercurl cterm=underline
 ]])
 
--- Hide diagnostic signs completely to not interfere with gitsigns
 vim.diagnostic.config({
   signs = {
     text = {
-      [vim.diagnostic.severity.ERROR] = "",
-      [vim.diagnostic.severity.WARN] = "",
-      [vim.diagnostic.severity.INFO] = "",
-      [vim.diagnostic.severity.HINT] = "",
+      [vim.diagnostic.severity.ERROR] = "󰅚",
+      [vim.diagnostic.severity.WARN] = "󰀪",
+      [vim.diagnostic.severity.INFO] = "󰋽",
+      [vim.diagnostic.severity.HINT] = "󰌶",
     },
   },
 })
+
+vim.api.nvim_set_hl(0, "DiagnosticSignError", { fg = "#eb6f92", bg = "NONE" })
+vim.api.nvim_set_hl(0, "DiagnosticSignWarn", { fg = "#f6c177", bg = "NONE" })
+vim.api.nvim_set_hl(0, "DiagnosticSignInfo", { fg = "#9ccfd8", bg = "NONE" })
+vim.api.nvim_set_hl(0, "DiagnosticSignHint", { fg = "#c4a7e7", bg = "NONE" })
+
+-- Claude review: configure per-project instructions, then set up keymaps
+require("claude-review").setup({})
+
+-- Claude review: sends git diff to Claude CLI, shows feedback as diagnostics
+vim.keymap.set("n", "<leader>cr", function()
+  require("claude-review").review_buffer()
+end, { desc = "[C]laude: [R]eview current file changes" })
+
+vim.keymap.set("n", "<leader>cD", function()
+  require("claude-review").diagnose_buffer()
+end, { desc = "[C]laude: [D]iagnose full file" })
+
+vim.keymap.set("n", "<leader>cA", function()
+  require("claude-review").toggle_auto()
+end, { desc = "[C]laude: toggle [A]uto diagnostics" })
+
+vim.keymap.set("n", "<leader>cc", function()
+  require("claude-review").clear()
+end, { desc = "[C]laude: [C]lear diagnostics" })
