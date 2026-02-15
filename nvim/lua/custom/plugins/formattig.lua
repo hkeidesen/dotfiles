@@ -47,6 +47,7 @@ return {
         lua = { "stylua" },
         python = { "ruff_fix", "ruff_organize_imports", "ruff_format" },
         go = { "goimports", "gofumpt" },
+        -- go = { "goimports", "gofumpt", "golines" },
         yaml = { "prettier" },
         yml = { "prettier" },
       },
@@ -54,6 +55,9 @@ return {
       formatters = {
         stylua = {
           prepend_args = { "--indent-type", "Spaces", "--indent-width", "2" },
+        },
+        golines = {
+          prepend_args = { "-m", "100" },
         },
         -- Biome only runs if biome.json exists, otherwise skips to prettier
         biome = {
@@ -63,6 +67,11 @@ return {
               upward = true,
             })[1] ~= nil
           end,
+        },
+        golangci_lint_fix = {
+          command = "golangci-lint",
+          args = { "run", "--fix", "$FILENAME" },
+          stdin = false,
         },
         -- Prettier - use project config
         prettier = {

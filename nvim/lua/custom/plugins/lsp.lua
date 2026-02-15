@@ -79,6 +79,7 @@ return {
             map("gr", fzf.lsp_references, "Goto References")
             map("gI", fzf.lsp_implementations, "Goto Implementation")
             map("gy", fzf.lsp_typedefs, "Goto Type Definition")
+            map("<leader>sw", fzf.grep_cword, "Search Word")
           else
             map("gd", vim.lsp.buf.definition, "Goto Definition")
             map("gr", vim.lsp.buf.references, "Goto References")
@@ -98,10 +99,29 @@ return {
         settings = {
           basedpyright = {
             analysis = {
-              typeCheckingMode = "basic",
+              typeCheckingMode = "standard",
+
               autoSearchPaths = true,
               useLibraryCodeForTypes = true,
-              stubPath = vim.fn.stdpath("data") .. "/lazy/python-type-stubs",
+              autoImportCompletions = true,
+
+              diagnosticSeverityOverrides = {
+                reportUnusedImport = "information",
+                reportUnusedVariable = "information",
+                reportUnusedFunction = "information",
+                reportMissingTypeStubs = "none",
+                reportOptionalMemberAccess = "none",
+                reportOptionalSubscript = "none",
+                reportPrivateImportUsage = "none",
+              },
+
+              diagnosticMode = "workspace",
+
+              inlayHints = {
+                variableTypes = true,
+                functionReturnTypes = true,
+                parameterTypes = true,
+              },
             },
           },
         },
@@ -232,4 +252,3 @@ return {
     end,
   },
 }
-

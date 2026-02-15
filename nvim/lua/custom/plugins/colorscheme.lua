@@ -7,9 +7,9 @@ return {
       vim.o.termguicolors = true
       vim.cmd("colorscheme rose-pine")
 
-      -- Set darker black background
-      vim.api.nvim_set_hl(0, "Normal", { bg = "#0a0a0a" })
-      vim.api.nvim_set_hl(0, "NormalFloat", { bg = "#0a0a0a" })
+      -- -- Set darker black background
+      -- vim.api.nvim_set_hl(0, "Normal", { bg = "#0a0a0a" })
+      -- vim.api.nvim_set_hl(0, "NormalFloat", { bg = "#0a0a0a" })
     end,
   },
 }
