@@ -569,23 +569,3 @@ vim.api.nvim_set_hl(0, "DiagnosticSignError", { fg = "#eb6f92", bg = "NONE" })
 vim.api.nvim_set_hl(0, "DiagnosticSignWarn", { fg = "#f6c177", bg = "NONE" })
 vim.api.nvim_set_hl(0, "DiagnosticSignInfo", { fg = "#9ccfd8", bg = "NONE" })
 vim.api.nvim_set_hl(0, "DiagnosticSignHint", { fg = "#c4a7e7", bg = "NONE" })
-
--- Claude review: configure per-project instructions, then set up keymaps
-require("claude-review").setup({})
-
--- Claude review: sends git diff to Claude CLI, shows feedback as diagnostics
-vim.keymap.set("n", "<leader>cr", function()
-  require("claude-review").review_buffer()
-end, { desc = "[C]laude: [R]eview current file changes" })
-
-vim.keymap.set("n", "<leader>cD", function()
-  require("claude-review").diagnose_buffer()
-end, { desc = "[C]laude: [D]iagnose full file" })
-
-vim.keymap.set("n", "<leader>cA", function()
-  require("claude-review").toggle_auto()
-end, { desc = "[C]laude: toggle [A]uto diagnostics" })
-
-vim.keymap.set("n", "<leader>cc", function()
-  require("claude-review").clear()
-end, { desc = "[C]laude: [C]lear diagnostics" })

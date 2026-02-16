@@ -3,6 +3,7 @@ local M = {}
 local default_config = require("claude-review.config")
 
 M.config = {
+  model = default_config.model,
   default = default_config.default,
   projects = default_config.projects,
 }
@@ -11,6 +12,9 @@ function M.setup(opts)
   opts = opts or {}
   if opts.default then
     M.config.default = opts.default
+  end
+  if opts.model then
+    M.config.model = opts.model
   end
   if opts.projects then
     M.config.projects = vim.tbl_deep_extend("force", M.config.projects, opts.projects)
@@ -31,6 +35,14 @@ local function get_instructions()
     return M.config.projects[name]
   end
   return M.config.default
+end
+
+local function build_cmd(prompt)
+  local cmd = { "claude", "-p", prompt }
+  if M.config.model then
+    vim.list_extend(cmd, { "--model", M.config.model })
+  end
+  return cmd
 end
 
 local severity_map = {
@@ -104,7 +116,7 @@ If the code looks good, respond with just: LGTM
 Do not include any other text, explanation, or formatting.
 ]]
 
-  local job_id = vim.fn.jobstart({ "claude", "-p", prompt }, {
+  local job_id = vim.fn.jobstart(build_cmd(prompt), {
     stdout_buffered = true,
     on_stdout = function(_, data)
       -- Filter trailing empty string that Neovim appends
@@ -188,7 +200,7 @@ Do not include any other text, explanation, or formatting.
     instructions
   )
 
-  local job_id = vim.fn.jobstart({ "claude", "-p", prompt }, {
+  local job_id = vim.fn.jobstart(build_cmd(prompt), {
     stdout_buffered = true,
     on_stdout = function(_, data)
       local filtered = vim.tbl_filter(function(s)
