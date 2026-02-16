@@ -14,6 +14,7 @@ export PATH="$PATH:/usr/local/go/bin"
 export PATH="$HOME/go/bin:$PATH"
 export PATH="/Applications/Espanso.app/Contents/MacOS:$PATH"
 export PATH="$PATH:/Users/hans-kristian.norum/.local/bin"
+export PATH="$HOME/dotfiles/scripts:$PATH"
 
 # Sensible locale
 export LC_ALL=en_US.UTF-8

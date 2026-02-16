@@ -1,5 +1,7 @@
 local C = {}
 
+C.model = nil -- e.g. "claude-sonnet-4-5-20250929"
+
 C.default = [[
 Focus on: bugs, logic errors, missing error handling, type issues, security concerns, race conditions, resource leaks.
 Do NOT report style issues, naming conventions, or missing comments.

@@ -1,0 +1,319 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ── Cleanup on exit / ctrl+c ───────────────────────────────────────────
+SPINNER_PID=""
+cleanup() {
+  if [[ -n "$SPINNER_PID" ]]; then
+    kill "$SPINNER_PID" 2>/dev/null
+    wait "$SPINNER_PID" 2>/dev/null || true
+  fi
+  exit "${1:-0}"
+}
+trap 'cleanup 130' INT TERM
+trap 'cleanup' EXIT
+
+spinner() {
+  local chars='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+  local i=0
+  local start=$SECONDS
+  while true; do
+    printf '\r %s Waiting for Claude... (%ds)' "${chars:i++%${#chars}:1}" "$(( SECONDS - start ))" >&2
+    sleep 0.3
+  done
+}
+
+stop_spinner() {
+  if [[ -n "$SPINNER_PID" ]]; then
+    kill "$SPINNER_PID" 2>/dev/null
+    wait "$SPINNER_PID" 2>/dev/null || true
+    SPINNER_PID=""
+    printf '\r\033[K' >&2
+  fi
+}
+
+# ── Config ──────────────────────────────────────────────────────────────
+MODEL="claude-sonnet-4-5-20250929"
+REVIEW_DIR=".claude-reviews"
+
+# ── Usage ───────────────────────────────────────────────────────────────
+usage() {
+  cat <<EOF
+Usage: claude-review [OPTIONS] [file ...]
+
+Review git changes with Claude. Optionally pass file paths to scope the review.
+
+Options:
+  --all             Review all uncommitted changes including new files (default)
+  --staged          Review staged changes only
+  --unstaged        Review unstaged changes to tracked files only
+  --base [<branch>] Review diff against a base branch (auto-detects default branch if omitted)
+  --opus            Use Opus (slower, more thorough)
+  --help            Show this help message
+
+Output is streamed to terminal and saved as markdown in ${REVIEW_DIR}/.
+EOF
+  exit 0
+}
+
+# ── Parse args ──────────────────────────────────────────────────────────
+MODE="all"
+BASE_BRANCH=""
+FILE_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --all)     MODE="all"; shift ;;
+    --staged)  MODE="staged"; shift ;;
+    --unstaged) MODE="unstaged"; shift ;;
+    --opus)    MODEL="claude-opus-4-6"; shift ;;
+    --base)
+      MODE="base"
+      if [[ -n "${2:-}" && "${2}" != --* ]]; then
+        BASE_BRANCH="$2"
+        shift 2
+      else
+        shift
+      fi
+      ;;
+    --help|-h) usage ;;
+    *) FILE_ARGS+=("$1"); shift ;;
+  esac
+done
+
+# ── Navigate to repo root ──────────────────────────────────────────────
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || {
+  echo "Error: not inside a git repository." >&2
+  exit 1
+}
+cd "$REPO_ROOT"
+REPO_NAME="$(basename "$REPO_ROOT")"
+
+# ── Detect default branch if needed ────────────────────────────────────
+if [[ "$MODE" == "base" && -z "$BASE_BRANCH" ]]; then
+  BASE_BRANCH="$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')" || true
+  if [[ -z "$BASE_BRANCH" ]]; then
+    for candidate in main master develop; do
+      if git rev-parse --verify "$candidate" &>/dev/null; then
+        BASE_BRANCH="$candidate"
+        break
+      fi
+    done
+  fi
+  if [[ -z "$BASE_BRANCH" ]]; then
+    echo "Error: could not detect default branch. Specify one: claude-review --base <branch>" >&2
+    exit 1
+  fi
+fi
+
+# Validate branch exists
+if [[ "$MODE" == "base" ]] && ! git rev-parse --verify "$BASE_BRANCH" &>/dev/null; then
+  echo "Error: branch '${BASE_BRANCH}' not found." >&2
+  echo "Available branches:"
+  git branch --format='  %(refname:short)' >&2
+  exit 1
+fi
+
+# ── Excluded paths (vendor, generated, lock files, etc.) ───────────────
+EXCLUDE_PATHS=(
+  vendor
+  node_modules
+  dist
+  build
+  .next
+  __pycache__
+  go.sum
+  package-lock.json
+  yarn.lock
+  pnpm-lock.yaml
+  bun.lockb
+  Cargo.lock
+  Gemfile.lock
+  composer.lock
+  "*.min.js"
+  "*.min.css"
+  "*.map"
+  "*.pb.go"
+  "*.generated.*"
+  "*.snap"
+)
+
+DIFF_EXCLUDE=()
+for p in "${EXCLUDE_PATHS[@]}"; do
+  DIFF_EXCLUDE+=(":(exclude)$p")
+done
+
+# ── Collect diff ────────────────────────────────────────────────────────
+PATHSPECS=("${FILE_ARGS[@]:-.}" "${DIFF_EXCLUDE[@]}")
+
+case "$MODE" in
+  staged)   DIFF="$(git diff --cached -- "${PATHSPECS[@]}")" ; MODE_LABEL="staged changes" ;;
+  base)     DIFF="$(git diff "${BASE_BRANCH}...HEAD" -- "${PATHSPECS[@]}")" ; MODE_LABEL="diff against ${BASE_BRANCH}" ;;
+  unstaged) DIFF="$(git diff -- "${PATHSPECS[@]}")" ; MODE_LABEL="unstaged changes" ;;
+  all)
+    DIFF="$(git diff HEAD -- "${PATHSPECS[@]}")" ; MODE_LABEL="all uncommitted changes"
+    # Include untracked (new) files
+    while IFS= read -r ufile; do
+      [[ -z "$ufile" ]] && continue
+      UDIFF="$(git diff --no-index /dev/null "$ufile" 2>/dev/null)" || true
+      [[ -n "$UDIFF" ]] && DIFF+=$'\n'"$UDIFF"
+    done < <(git ls-files --others --exclude-standard | if [[ ${#FILE_ARGS[@]} -gt 0 ]]; then grep -F "$(printf '%s\n' "${FILE_ARGS[@]}")"; else cat; fi)
+    ;;
+esac
+
+if [[ -z "$DIFF" ]]; then
+  echo "No ${MODE_LABEL} found — nothing to review."
+  exit 0
+fi
+
+case "$MODE" in
+  staged)   STAT="$(git diff --stat --cached -- "${PATHSPECS[@]}")" ;;
+  base)     STAT="$(git diff --stat "${BASE_BRANCH}...HEAD" -- "${PATHSPECS[@]}")" ;;
+  unstaged) STAT="$(git diff --stat -- "${PATHSPECS[@]}")" ;;
+  all)
+    STAT="$(git diff --stat HEAD -- "${PATHSPECS[@]}")"
+    UNTRACKED_COUNT="$(git ls-files --others --exclude-standard | if [[ ${#FILE_ARGS[@]} -gt 0 ]]; then grep -F "$(printf '%s\n' "${FILE_ARGS[@]}")"; else cat; fi | wc -l | tr -d ' ')"
+    [[ "$UNTRACKED_COUNT" -gt 0 ]] && STAT+=$'\n'"${UNTRACKED_COUNT} untracked file(s)"
+    ;;
+esac
+
+# ── Ensure output dir + gitignore ───────────────────────────────────────
+mkdir -p "$REVIEW_DIR"
+
+if [[ -f .gitignore ]]; then
+  grep -qxF "$REVIEW_DIR/" .gitignore 2>/dev/null || echo "$REVIEW_DIR/" >> .gitignore
+else
+  echo "$REVIEW_DIR/" > .gitignore
+fi
+
+# ── Build prompt ──────────────────────────────────────────────────────
+PROMPT="You are a senior code reviewer. You will receive a git diff via stdin from the repository \"${REPO_NAME}\".
+
+File stats:
+${STAT}
+
+Review the diff carefully. Produce a structured markdown report:
+
+# Code Review
+
+## Summary
+1-3 sentence overview of the changes and overall quality.
+
+## Findings
+
+For each file with findings, create a section:
+
+### \`filename\`
+
+List findings as:
+- **SEVERITY** \`filename:LINE\` — description
+
+Where SEVERITY is one of:
+- **BUG** — likely defect or runtime error
+- **CONCERN** — code smell, potential issue, or maintainability risk
+- **SUGGESTION** — improvement that would make the code better
+- **TIP** — minor style or best-practice note
+
+Always include the \`filename:LINE\` reference so the developer can jump to it.
+If a file looks good, you may omit it or note \"No issues found.\"
+
+## Verdict
+One of: LGTM / Needs attention / Do not merge — with a brief justification.
+
+Guidelines:
+- Be specific and actionable, not vague.
+- Reference exact line numbers from the diff.
+- Consider edge cases, error handling, security, and performance.
+- Look at the overall design, not just syntax.
+- Keep it concise — only flag things that matter."
+
+# ── Output file ─────────────────────────────────────────────────────────
+TIMESTAMP="$(date +%Y-%m-%d_%H%M%S)"
+OUTFILE="${REPO_ROOT}/${REVIEW_DIR}/${TIMESTAMP}.md"
+
+# ── Header ──────────────────────────────────────────────────────────────
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo " Claude Code Review  |  ${REPO_NAME}  |  ${MODE_LABEL}"
+echo " $(date '+%Y-%m-%d %H:%M:%S')"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# ── Run Claude (pipe prompt via stdin) ──────────────────────────────────
+DIFF_LINES="$(echo "$DIFF" | wc -l | tr -d ' ')"
+echo " Sending ${DIFF_LINES} lines of diff to Claude (${MODEL})..."
+echo ""
+
+spinner &
+SPINNER_PID=$!
+
+CLAUDE_EXIT=0
+echo "$DIFF" | claude -p --model "$MODEL" "$PROMPT" > "$OUTFILE" 2>&1 || CLAUDE_EXIT=$?
+
+stop_spinner
+
+if [[ $CLAUDE_EXIT -ne 0 ]]; then
+  echo "Claude exited with code ${CLAUDE_EXIT}:" >&2
+  cat "$OUTFILE" >&2
+  exit 1
+fi
+
+cat "$OUTFILE"
+
+# ── Footer ──────────────────────────────────────────────────────────────
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo " Review saved to: ${OUTFILE}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# ── Interactive file picker (fzf) ───────────────────────────────────────
+if command -v fzf &>/dev/null; then
+  # Extract unique filenames that have findings
+  FINDING_FILES="$(grep -oE '`[A-Za-z0-9_/.+-]+\.[A-Za-z0-9]+:[0-9]+' "$OUTFILE" | \
+    tr -d '`' | sed 's/:[0-9]*$//' | sort -u)" || true
+
+  if [[ -n "$FINDING_FILES" ]]; then
+    echo ""
+    echo "Press enter to browse findings with fzf (ctrl-c to skip)..."
+
+    # Resolve basenames to full paths (Claude often omits directory prefixes)
+    resolve_file() {
+      local name="$1"
+      if [[ -f "$name" ]]; then echo "$name"; return; fi
+      local found
+      found="$(find . -name "$(basename "$name")" -not -path '*/vendor/*' -not -path '*/node_modules/*' -print -quit 2>/dev/null)"
+      echo "${found:-$name}"
+    }
+
+    export REVIEW_OUTFILE="$OUTFILE"
+
+    SELECTED="$(echo "$FINDING_FILES" | fzf \
+      --prompt="Select file > " \
+      --preview='
+        file={}
+        echo "  Findings for $file"
+        echo "  ────────────────────────────────────"
+        echo ""
+        grep -F "$file" "$REVIEW_OUTFILE" | \
+          grep -E "\*\*(BUG|CONCERN|SUGGESTION|TIP)\*\*" | \
+          sed "s/^[[:space:]]*- //" | \
+          sed "s/\*\*\([A-Z]*\)\*\*/[\1]/g" | \
+          sed "s/\`//g" | \
+          while IFS= read -r finding; do
+            echo "  $finding"
+            echo ""
+          done
+      ' \
+      --preview-window=right:60%:wrap \
+    )" || true
+
+    unset REVIEW_OUTFILE
+
+    if [[ -n "$SELECTED" ]]; then
+      FIRST_LINE="$(grep -oE "\`${SELECTED}:[0-9]+" "$OUTFILE" | head -1 | grep -oE '[0-9]+$')"
+      FILE="$(resolve_file "$SELECTED")"
+      if [[ -f "$FILE" ]]; then
+        ${EDITOR:-nvim} "+${FIRST_LINE:-1}" "$FILE"
+      fi
+    fi
+  fi
+fi
