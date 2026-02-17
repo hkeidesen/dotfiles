@@ -17,6 +17,13 @@ C.projects = {
 - Use `context.Context` as first parameter in functions that do I/O
 - Flag goroutines without cancellation or timeout as CONCERN
 
+## Codebase Consistency
+- Review changes against existing patterns in the repo (naming, error handling, structure)
+- Flag deviations from established conventions in neighboring files as SUGGESTION
+- If a new pattern is introduced, flag it as CONCERN unless it clearly improves on the existing approach
+- Check that new types, interfaces, and function signatures align with the style used elsewhere in the package
+- Flag inconsistent use of logging, response formatting, or middleware patterns compared to existing handlers
+
 ## Gin Framework
 - Handlers must call `c.JSON()` or `c.AbortWithStatusJSON()` — flag missing responses as BUG
 - Middleware should call `c.Next()` or `c.Abort()` — flag missing control flow as BUG

@@ -54,6 +54,90 @@ local severity_map = {
 
 local ns_review = vim.api.nvim_create_namespace("claude_review")
 local ns_diag = vim.api.nvim_create_namespace("claude_diagnostics")
+local ns_track = vim.api.nvim_create_namespace("claude_diagnostic_track")
+
+
+-- Extmark-based position tracking so diagnostics follow line changes
+local tracked = {} -- tracked[bufnr][ns] = { { mark_id, diag }, ... }
+local attached_bufs = {}
+
+local function sync_tracked_positions(bufnr)
+  if not tracked[bufnr] then return end
+
+  for ns, entries in pairs(tracked[bufnr]) do
+    local new_diags = {}
+    local changed = false
+
+    for _, entry in ipairs(entries) do
+      local ok, pos = pcall(vim.api.nvim_buf_get_extmark_by_id, bufnr, ns_track, entry.mark_id, {})
+      if ok and pos and #pos >= 1 then
+        local new_lnum = pos[1]
+        if new_lnum ~= entry.diag.lnum then
+          changed = true
+          entry.diag.lnum = new_lnum
+          entry.diag.end_lnum = new_lnum
+          local line_text = vim.api.nvim_buf_get_lines(bufnr, new_lnum, new_lnum + 1, false)[1] or ""
+          entry.diag.col = (line_text:find("%S") or 1) - 1
+          entry.diag.end_col = #line_text
+        end
+        table.insert(new_diags, vim.deepcopy(entry.diag))
+      end
+    end
+
+    if changed then
+      vim.diagnostic.set(ns, bufnr, new_diags)
+    end
+  end
+end
+
+local function ensure_buf_attached(bufnr)
+  if attached_bufs[bufnr] then return end
+  attached_bufs[bufnr] = true
+
+  vim.api.nvim_buf_attach(bufnr, false, {
+    on_lines = function()
+      vim.schedule(function()
+        if not vim.api.nvim_buf_is_valid(bufnr) then
+          attached_bufs[bufnr] = nil
+          tracked[bufnr] = nil
+          return
+        end
+        sync_tracked_positions(bufnr)
+      end)
+    end,
+    on_detach = function()
+      attached_bufs[bufnr] = nil
+      tracked[bufnr] = nil
+    end,
+  })
+end
+
+local function set_tracked_diagnostics(ns, bufnr, diagnostics)
+  vim.diagnostic.set(ns, bufnr, diagnostics)
+
+  -- Clean up old tracking extmarks
+  if tracked[bufnr] and tracked[bufnr][ns] then
+    for _, entry in ipairs(tracked[bufnr][ns]) do
+      pcall(vim.api.nvim_buf_del_extmark, bufnr, ns_track, entry.mark_id)
+    end
+    tracked[bufnr][ns] = nil
+  end
+
+  if #diagnostics == 0 then return end
+
+  if not tracked[bufnr] then tracked[bufnr] = {} end
+  tracked[bufnr][ns] = {}
+
+  for _, d in ipairs(diagnostics) do
+    local mark_id = vim.api.nvim_buf_set_extmark(bufnr, ns_track, d.lnum, 0, {})
+    table.insert(tracked[bufnr][ns], {
+      mark_id = mark_id,
+      diag = vim.deepcopy(d),
+    })
+  end
+
+  ensure_buf_attached(bufnr)
+end
 
 -- Parse Claude's response into diagnostics
 -- Expected format: LINE:SEVERITY:message
@@ -131,13 +215,13 @@ Do not include any other text, explanation, or formatting.
         end
 
         if response:match("^%s*LGTM%s*$") then
-          vim.diagnostic.set(ns_review, bufnr, {})
+          set_tracked_diagnostics(ns_review, bufnr, {})
           vim.notify("Claude: LGTM", vim.log.levels.INFO)
           return
         end
 
         local diagnostics = parse_response(response, bufnr, "claude")
-        vim.diagnostic.set(ns_review, bufnr, diagnostics)
+        set_tracked_diagnostics(ns_review, bufnr, diagnostics)
         vim.notify(string.format("Claude: %d findings", #diagnostics), vim.log.levels.INFO)
       end)
     end,
@@ -214,13 +298,13 @@ Do not include any other text, explanation, or formatting.
         end
 
         if response:match("^%s*LGTM%s*$") then
-          vim.diagnostic.set(ns_diag, bufnr, {})
+          set_tracked_diagnostics(ns_diag, bufnr, {})
           vim.notify("Claude dx: LGTM", vim.log.levels.INFO)
           return
         end
 
         local diagnostics = parse_response(response, bufnr, "claude-dx")
-        vim.diagnostic.set(ns_diag, bufnr, diagnostics)
+        set_tracked_diagnostics(ns_diag, bufnr, diagnostics)
 
         vim.notify(string.format("Claude dx: %d findings", #diagnostics), vim.log.levels.INFO)
       end)
@@ -282,8 +366,8 @@ end
 
 function M.clear()
   local bufnr = vim.api.nvim_get_current_buf()
-  vim.diagnostic.set(ns_review, bufnr, {})
-  vim.diagnostic.set(ns_diag, bufnr, {})
+  set_tracked_diagnostics(ns_review, bufnr, {})
+  set_tracked_diagnostics(ns_diag, bufnr, {})
   vim.notify("Claude diagnostics cleared", vim.log.levels.INFO)
 end
 

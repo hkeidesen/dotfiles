@@ -175,6 +175,97 @@ return {
       map("n", "]q", "<cmd>cnext<CR>", { desc = "Next quickfix" })
       map("n", "[q", "<cmd>cprev<CR>", { desc = "Prev quickfix" })
 
+      -- Claude plans picker
+      local function claude_plans()
+        local plans_dir = vim.fn.expand("~/.claude/plans")
+        local files = vim.fn.glob(plans_dir .. "/*.md", false, true)
+        if #files == 0 then
+          vim.notify("No plans found in ~/.claude/plans/", vim.log.levels.WARN)
+          return
+        end
+
+        local entries = {}
+        for _, filepath in ipairs(files) do
+          local lines = {}
+          local f = io.open(filepath, "r")
+          if f then
+            for i = 1, 10 do
+              local line = f:read("*l")
+              if not line then break end
+              lines[#lines + 1] = line
+            end
+            f:close()
+          end
+
+          -- Parse frontmatter
+          local repo, branch, updated
+          local title = vim.fn.fnamemodify(filepath, ":t:r")
+          local in_frontmatter = false
+
+          for _, line in ipairs(lines) do
+            if line:match("^---") then
+              if in_frontmatter then break end
+              in_frontmatter = true
+            elseif in_frontmatter then
+              repo = repo or line:match("^repo:%s*(.+)")
+              branch = branch or line:match("^branch:%s*(.+)")
+              updated = updated or line:match("^updated:%s*(.+)")
+            else
+              local heading = line:match("^#%s+(.+)")
+              if heading then title = heading end
+            end
+          end
+
+          -- Fallback to mtime if no updated field
+          if not updated then
+            local stat = vim.uv.fs_stat(filepath)
+            if stat then
+              updated = os.date("%Y-%m-%d", stat.mtime.sec)
+            else
+              updated = "unknown"
+            end
+          end
+
+          local label = string.format("[%s]", updated)
+          if repo then
+            label = label .. " " .. repo
+            if branch then label = label .. "@" .. branch end
+          end
+          label = label .. " — " .. title
+
+          entries[#entries + 1] = { label = label, updated = updated, path = filepath }
+        end
+
+        -- Sort by updated descending
+        table.sort(entries, function(a, b) return a.updated > b.updated end)
+
+        local display = {}
+        for _, e in ipairs(entries) do
+          display[#display + 1] = e.path .. "\t" .. e.label
+        end
+
+        fzf.fzf_exec(display, {
+          prompt = "Plans> ",
+          fzf_opts = {
+            ["--delimiter"] = "\t",
+            ["--with-nth"] = "2..",
+            ["--preview"] = "bat --style=plain --color=always {1} 2>/dev/null || cat {1}",
+            ["--preview-window"] = "right:60%",
+          },
+          actions = {
+            ["default"] = function(selected)
+              if not selected or #selected == 0 then return end
+              local path = selected[1]:match("^(.-)\t")
+              if path then
+                vim.cmd("edit " .. vim.fn.fnameescape(path))
+              end
+            end,
+          },
+        })
+      end
+
+      map("n", "<leader>fp", claude_plans, { desc = "Find plans" })
+
       -- Harpoon
       local harpoon_ok, harpoon = pcall(require, "harpoon")
       if harpoon_ok then
