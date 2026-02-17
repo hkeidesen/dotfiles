@@ -1,3 +1,19 @@
+function _G.get_oil_winbar()
+  local ok, oil = pcall(require, "oil")
+  if not ok then
+    return ""
+  end
+  local dir = oil.get_current_dir()
+  if not dir then
+    return ""
+  end
+  local home = vim.env.HOME
+  if home and dir:sub(1, #home) == home then
+    dir = "~" .. dir:sub(#home + 1)
+  end
+  return dir
+end
+
 return {
   {
     "stevearc/oil.nvim",
@@ -24,6 +40,7 @@ return {
       },
 
       win_options = {
+        winbar = "%!v:lua.get_oil_winbar()",
         wrap = false,
         signcolumn = "yes:2", -- Required for oil-git-status (2 columns: index + working tree)
         cursorcolumn = false,

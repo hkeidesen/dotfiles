@@ -71,7 +71,7 @@ vim.opt.ignorecase = true
 vim.opt.smartcase = true
 
 -- Keep signcolumn on by default
-vim.opt.signcolumn = "yes:2"
+vim.opt.signcolumn = "yes"
 
 -- Decrease update time
 vim.opt.updatetime = 250
@@ -499,18 +499,9 @@ local minimal_diagnostics = {
 }
 
 local detailed_diagnostics = {
-  virtual_text = {
-    current_line = true,
-    source = "if_many",
-    severity = {
-      max = vim.diagnostic.severity.WARN,
-    },
-  },
+  virtual_text = false,
   virtual_lines = {
     current_line = true,
-    severity = {
-      min = vim.diagnostic.severity.ERROR,
-    },
   },
   underline = {
     severity = {
