@@ -11,8 +11,8 @@ return {
         group = vim.api.nvim_create_augroup("codediff_winbar_labels", { clear = true }),
         callback = function()
           vim.schedule(function()
-            local ok, lifecycle = pcall(require, "codediff.ui.lifecycle")
-            if not ok then return end
+            local lifecycle = package.loaded["codediff.ui.lifecycle"]
+            if not lifecycle then return end
 
             local tabpage = vim.api.nvim_get_current_tabpage()
             local _, result_win = lifecycle.get_result(tabpage)

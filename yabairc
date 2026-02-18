@@ -24,9 +24,12 @@ yabai -m config window_gap 12
 
 # -------------
 # Mouse controls
+#   alt + left-click drag  → move window
+#   alt + right-click drag → resize window
+#   dropping a window onto another → stack (tabbed)
 # -------------
-yabai -m config mouse_drop_action swap
-yabai -m config mouse_modifier fn
+yabai -m config mouse_drop_action stack
+yabai -m config mouse_modifier alt
 yabai -m config mouse_action1 move
 yabai -m config mouse_action2 resize
 

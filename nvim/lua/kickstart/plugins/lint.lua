@@ -44,20 +44,43 @@ return {
         ignore_exitcode = true,
       })
 
+      -- Heavyweight linters that should only run on save.
+      local save_only = { golangcilint = true }
+
       local aug = vim.api.nvim_create_augroup("lint", { clear = true })
-      vim.api.nvim_create_autocmd({ "BufWritePost", "InsertLeave" }, {
+
+      -- All linters run on save.
+      vim.api.nvim_create_autocmd("BufWritePost", {
         group = aug,
         callback = function()
           lint.try_lint()
         end,
       })
-      -- Optional: also lint when opening a buffer
+
+      -- Lightweight linters also run on InsertLeave / BufEnter.
+      local function try_lint_lightweight()
+        local ft = vim.bo.filetype
+        local names = lint.linters_by_ft[ft] or {}
+        local light = {}
+        for _, name in ipairs(names) do
+          if not save_only[name] then
+            light[#light + 1] = name
+          end
+        end
+        if #light > 0 then
+          lint.try_lint(light)
+        end
+      end
+
+      vim.api.nvim_create_autocmd("InsertLeave", {
+        group = aug,
+        callback = try_lint_lightweight,
+      })
       vim.api.nvim_create_autocmd("BufEnter", {
         group = aug,
         callback = function()
-          -- Only lint real files (not help/quickfix/etc.)
           if vim.fn.expand("%:p") ~= "" then
-            lint.try_lint()
+            try_lint_lightweight()
           end
         end,
       })
