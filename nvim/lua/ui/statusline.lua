@@ -103,6 +103,68 @@ local PAD, SEP = " ", "%="
 local SBAR = { "▔", "🮂", "🬂", "🮃", "▀", "▄", "▃", "🬭", "▂", "▁" }
 
 -- ───────────────────────────────────────────────────────────
+-- diagnostic / LSP caches (avoid recomputing on every render)
+-- ───────────────────────────────────────────────────────────
+local diag_cache = {} -- [bufnr] = { err = N, warn = N }
+local lsp_diag_available = {} -- [bufnr] = bool
+
+local function refresh_diag_cache(bufnr)
+  if not bufnr or bufnr == 0 then
+    bufnr = api.nvim_get_current_buf()
+  end
+  local counts = { err = 0, warn = 0 }
+  if type(vim.diagnostic.count) == "function" then
+    local ok, t = pcall(vim.diagnostic.count, bufnr)
+    if ok and type(t) == "table" then
+      counts.err = t[vim.diagnostic.severity.ERROR] or 0
+      counts.warn = t[vim.diagnostic.severity.WARN] or 0
+    end
+  else
+    counts.err = #vim.diagnostic.get(bufnr, { severity = vim.diagnostic.severity.ERROR })
+    counts.warn = #vim.diagnostic.get(bufnr, { severity = vim.diagnostic.severity.WARN })
+  end
+  diag_cache[bufnr] = counts
+end
+
+local function refresh_lsp_available(bufnr)
+  if not bufnr or bufnr == 0 then
+    bufnr = api.nvim_get_current_buf()
+  end
+  local method = vim.lsp.protocol.Methods.textDocument_publishDiagnostics
+  for _, client in pairs(vim.lsp.get_clients({ bufnr = bufnr })) do
+    if client:supports_method(method) then
+      lsp_diag_available[bufnr] = true
+      return
+    end
+  end
+  lsp_diag_available[bufnr] = false
+end
+
+local cache_aug = api.nvim_create_augroup("StatuslineDiagCache", { clear = true })
+api.nvim_create_autocmd("DiagnosticChanged", {
+  group = cache_aug,
+  callback = function(args)
+    refresh_diag_cache(args.buf)
+    vim.cmd("redrawstatus")
+  end,
+})
+api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
+  group = cache_aug,
+  callback = function(args)
+    refresh_lsp_available(args.buf)
+    refresh_diag_cache(args.buf)
+    vim.cmd("redrawstatus")
+  end,
+})
+api.nvim_create_autocmd("BufDelete", {
+  group = cache_aug,
+  callback = function(args)
+    diag_cache[args.buf] = nil
+    lsp_diag_available[args.buf] = nil
+  end,
+})
+
+-- ───────────────────────────────────────────────────────────
 -- utils
 -- ───────────────────────────────────────────────────────────
 local function concat(parts)
@@ -216,22 +278,14 @@ local function path_widget(root, fname)
 end
 
 local function diagnostics_widget()
-  if not tools.diagnostics_available() then
+  local bufnr = api.nvim_get_current_buf()
+  if not lsp_diag_available[bufnr] then
     return ""
   end
 
-  local function count_for(sev)
-    if type(vim.diagnostic.count) == "function" then
-      local ok, t = pcall(vim.diagnostic.count, 0)
-      if ok and type(t) == "table" then
-        return t[sev] or 0
-      end
-    end
-    return #vim.diagnostic.get(0, { severity = sev })
-  end
-
-  local err = string.format("%-3d", count_for(vim.diagnostic.severity.ERROR))
-  local warn = string.format("%-3d", count_for(vim.diagnostic.severity.WARN))
+  local counts = diag_cache[bufnr] or { err = 0, warn = 0 }
+  local err = string.format("%-3d", counts.err)
+  local warn = string.format("%-3d", counts.warn)
   return string.format(
     "%s %s %s %s",
     ICON.error,

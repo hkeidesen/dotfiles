@@ -44,12 +44,18 @@ local function make_gutters_transparent()
     clear_bg(g)
   end
 
-  -- Iterate all highlight groups to catch dynamic ones (GitSigns*, DiagnosticSign*, Snacks*, etc.).
-  local all = vim.fn.getcompletion("", "highlight")
-  for _, g in ipairs(all) do
-    if g:match("^GitSigns") or g:match("^DiagnosticSign") or g:match("^Snacks.*Sign") then
-      clear_bg(g)
-    end
+  -- Known dynamic sign/gutter groups — avoids scanning all 1000+ highlight groups.
+  local dynamic = {
+    "GitSignsAdd", "GitSignsChange", "GitSignsDelete",
+    "GitSignsChangedelete", "GitSignsTopdelete", "GitSignsUntracked",
+    "GitSignsAddNr", "GitSignsChangeNr", "GitSignsDeleteNr",
+    "GitSignsAddLn", "GitSignsChangeLn", "GitSignsDeleteLn",
+    "GitSignsStagedAdd", "GitSignsStagedChange", "GitSignsStagedDelete",
+    "DiagnosticSignError", "DiagnosticSignWarn", "DiagnosticSignInfo", "DiagnosticSignHint", "DiagnosticSignOk",
+    "SnacksDashboardIcon", "SnacksIndentScope",
+  }
+  for _, g in ipairs(dynamic) do
+    clear_bg(g)
   end
 end
 
@@ -406,9 +412,8 @@ require("lazy").setup({
   { "Bilal2453/luvit-meta", lazy = true },
   {
     "NvChad/nvim-colorizer.lua",
-    event = "BufReadPre",
-    opts = { -- set to setup table
-    },
+    ft = { "css", "scss", "html", "vue", "javascript", "typescript", "typescriptreact", "javascriptreact" },
+    opts = {},
   },
   { "wakatime/vim-wakatime", lazy = false },
 
@@ -556,6 +561,57 @@ vim.diagnostic.config({
   },
 })
 
+-- Custom diagnostic line highlights that skip TODO/HACK/FIXME/NOTE lines
+local line_hl_ns = vim.api.nvim_create_namespace("diagnostic_line_hl")
+local skip_pattern = "^%s*[/-]*%s*(%u+):"
+local skip_keywords = { TODO = true, HACK = true, FIXME = true, NOTE = true, INFO = true, XXX = true }
+
+local function refresh_line_hl(bufnr)
+  vim.api.nvim_buf_clear_namespace(bufnr, line_hl_ns, 0, -1)
+  local best = {}
+  for _, d in ipairs(vim.diagnostic.get(bufnr)) do
+    if d.severity <= vim.diagnostic.severity.WARN then
+      if not best[d.lnum] or d.severity < best[d.lnum] then
+        best[d.lnum] = d.severity
+      end
+    end
+  end
+  local line_count = vim.api.nvim_buf_line_count(bufnr)
+  for lnum, sev in pairs(best) do
+    if lnum < line_count then
+      local text = (vim.api.nvim_buf_get_lines(bufnr, lnum, lnum + 1, false)[1] or "")
+      local keyword = text:match(skip_pattern)
+      if not (keyword and skip_keywords[keyword]) then
+        local hl = sev == vim.diagnostic.severity.ERROR and "DiagnosticLineError" or "DiagnosticLineWarn"
+        vim.api.nvim_buf_set_extmark(bufnr, line_hl_ns, lnum, 0, { line_hl_group = hl, priority = 10 })
+      end
+    end
+  end
+end
+
+local line_hl_timers = {}
+vim.api.nvim_create_autocmd("DiagnosticChanged", {
+  group = vim.api.nvim_create_augroup("diagnostic_line_hl", { clear = true }),
+  callback = function(args)
+    local bufnr = args.buf
+    if line_hl_timers[bufnr] then
+      line_hl_timers[bufnr]:stop()
+    end
+    local timer = vim.uv.new_timer()
+    line_hl_timers[bufnr] = timer
+    timer:start(50, 0, vim.schedule_wrap(function()
+      timer:stop()
+      timer:close()
+      line_hl_timers[bufnr] = nil
+      if vim.api.nvim_buf_is_valid(bufnr) then
+        refresh_line_hl(bufnr)
+      end
+    end))
+  end,
+})
+
+vim.api.nvim_set_hl(0, "DiagnosticLineError", { bg = "#2d1520" })
+vim.api.nvim_set_hl(0, "DiagnosticLineWarn", { bg = "#2d2520" })
 vim.api.nvim_set_hl(0, "DiagnosticSignError", { fg = "#eb6f92", bg = "NONE" })
 vim.api.nvim_set_hl(0, "DiagnosticSignWarn", { fg = "#f6c177", bg = "NONE" })
 vim.api.nvim_set_hl(0, "DiagnosticSignInfo", { fg = "#9ccfd8", bg = "NONE" })

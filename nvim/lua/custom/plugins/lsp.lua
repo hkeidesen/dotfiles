@@ -148,7 +148,8 @@ return {
       -- Configure typos_lsp to report typos as warnings
       vim.lsp.config("typos_lsp", {
         init_options = {
-          diagnosticSeverity = "Warning", -- Report typos as warnings instead of errors
+          config = "~/dotfiles/_typos.toml",
+          diagnosticSeverity = "Warning",
         },
       })
       vim.lsp.enable("typos_lsp")
