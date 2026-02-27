@@ -1,0 +1,26 @@
+# 🔐 Secrets
+.zsh_history
+.wakatime.cfg
+.ssh/
+.gnupg/
+.npmrc
+
+# 🧹 System
+.DS_Store
+.Trash/
+Library/
+Desktop/
+Documents/
+Downloads/
+Movies/
+Music/
+Pictures/
+Public/
+Applications/
+
+# 💩 Runtime files
+.zcompdump*
+.zsh_sessions/
+.cache/
+.vscode/
+node_modules/

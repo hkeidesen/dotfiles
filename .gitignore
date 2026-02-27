@@ -1,6 +1,6 @@
-# GitHub Copilot (OAuth tokens etc.)
-.config/github-copilot/
-
+# Duplicate config directories (top-level dirs are canonical)
+config/
+.config/
 
 # Auth & secrets
 .ssh/
@@ -8,5 +8,9 @@
 .wakatime.cfg
 .zsh_history
 .npmrc
-.config/gh/hosts.yml
-.config/1Password/
+gh/hosts.yml
+
+# lnav defaults & ephemeral data
+lnav/configs/default/
+lnav/formats/default/
+lnav/*.history
