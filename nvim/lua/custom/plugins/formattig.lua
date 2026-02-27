@@ -19,8 +19,12 @@ return {
 
       -- Simple format on save with LSP fallback
       format_on_save = function(bufnr)
-        -- Disable format on save for specific paths if needed
-        -- local bufname = vim.api.nvim_buf_get_name(bufnr)
+        if vim.bo[bufnr].filetype == "go" then
+          return {
+            timeout_ms = 3000,
+            lsp_format = "last",
+          }
+        end
         return {
           timeout_ms = 3000,
           lsp_format = "fallback",

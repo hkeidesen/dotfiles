@@ -6,6 +6,7 @@ return {
     },
     config = function()
       require("local-highlight").setup({
+        disable_file_types = { "terminal" },
         animate = {
           enabled = true,
           easing = "linear",

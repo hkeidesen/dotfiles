@@ -99,7 +99,7 @@ contexts = [
 [character]
 success_symbol = "[❯](bold fg:accent) "
 error_symbol   = "[✗](fg:yellow) "
-vicmd_symbol   = "[❮](fg:blue) "
+vicmd_symbol   = "[❮](bold fg:orange) "
 format = "$symbol"
 
 # (Extras you had – disabled by default)

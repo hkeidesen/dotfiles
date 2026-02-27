@@ -1,0 +1,62 @@
+{
+  "Arrow Function": {
+    "prefix": "fn",
+    "body": [
+      "const ${1:functionName} = (${2:params}) => {",
+      "\t${0:// function body}",
+      "}"
+    ],
+    "description": "Arrow function"
+  },
+  "Async Arrow Function": {
+    "prefix": "afn",
+    "body": [
+      "const ${1:functionName} = async (${2:params}) => {",
+      "\t${0:// function body}",
+      "}"
+    ],
+    "description": "Async arrow function"
+  },
+  "Try Catch": {
+    "prefix": "try",
+    "body": [
+      "try {",
+      "\t${1:// try block}",
+      "} catch (${2:error}) {",
+      "\t${0:// catch block}",
+      "}"
+    ],
+    "description": "Try-catch block"
+  },
+  "Console Log": {
+    "prefix": "log",
+    "body": "console.log(${0:value})",
+    "description": "console.log"
+  },
+  "Export": {
+    "prefix": "exp",
+    "body": "export { ${1:item} } from '${0:./path}'",
+    "description": "Export statement"
+  },
+  "Import": {
+    "prefix": "imp",
+    "body": "import { ${1:item} } from '${0:module}'",
+    "description": "Import statement"
+  },
+  "Default Import": {
+    "prefix": "impd",
+    "body": "import ${1:defaultExport} from '${0:module}'",
+    "description": "Default import"
+  },
+  "Class": {
+    "prefix": "class",
+    "body": [
+      "class ${1:ClassName} {",
+      "\tconstructor(${2:params}) {",
+      "\t\t${0:// constructor body}",
+      "\t}",
+      "}"
+    ],
+    "description": "Class definition"
+  }
+}

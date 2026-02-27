@@ -57,6 +57,7 @@ return {
         documentation = { auto_show = true },
         trigger = { prefetch_on_insert = false },
         menu = {
+          auto_show = true,
           draw = {
             columns = {
               { "label", "label_description", gap = 1 },

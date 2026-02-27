@@ -1,0 +1,86 @@
+{
+  "React Functional Component": {
+    "prefix": "rfc",
+    "body": [
+      "import React from \"react\";",
+      "",
+      "interface Props {",
+      "\t${1:prop: string;}",
+      "}",
+      "",
+      "const ${TM_FILENAME_BASE}: React.FC<Props> = (props) => {",
+      "\treturn <div>${0:content}</div>;",
+      "};",
+      "",
+      "export default ${TM_FILENAME_BASE};"
+    ],
+    "description": "React functional component with TypeScript"
+  },
+  "React Component with useState": {
+    "prefix": "rfcs",
+    "body": [
+      "import React, { useState } from \"react\";",
+      "",
+      "interface Props {",
+      "\t${1:prop: string;}",
+      "}",
+      "",
+      "const ${TM_FILENAME_BASE}: React.FC<Props> = (props) => {",
+      "\tconst [${2:state}, set${3:State}] = useState<${4:string}>(${5:\"\"});",
+      "",
+      "\treturn <div>${0:content}</div>;",
+      "};",
+      "",
+      "export default ${TM_FILENAME_BASE};"
+    ],
+    "description": "React functional component with useState"
+  },
+  "React Component with useEffect": {
+    "prefix": "rfce",
+    "body": [
+      "import React, { useEffect } from \"react\";",
+      "",
+      "interface Props {",
+      "\t${1:prop: string;}",
+      "}",
+      "",
+      "const ${TM_FILENAME_BASE}: React.FC<Props> = (props) => {",
+      "\tuseEffect(() => {",
+      "\t\t${2:// effect logic here}",
+      "\t}, [${3}]);",
+      "",
+      "\treturn <div>${0:content}</div>;",
+      "};",
+      "",
+      "export default ${TM_FILENAME_BASE};"
+    ],
+    "description": "React functional component with useEffect"
+  },
+  "Simple React Component": {
+    "prefix": "rc",
+    "body": [
+      "import React from \"react\";",
+      "",
+      "const ${TM_FILENAME_BASE} = () => {",
+      "\treturn <div>${0:content}</div>;",
+      "};",
+      "",
+      "export default ${TM_FILENAME_BASE};"
+    ],
+    "description": "Simple React component"
+  },
+  "Interface": {
+    "prefix": "interface",
+    "body": [
+      "interface ${1:InterfaceName} {",
+      "\t${0:property: string;}",
+      "}"
+    ],
+    "description": "TypeScript interface"
+  },
+  "Type": {
+    "prefix": "type",
+    "body": "type ${1:TypeName} = ${0:string;}",
+    "description": "TypeScript type alias"
+  }
+}

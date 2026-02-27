@@ -1,0 +1,46 @@
+{
+  "Logrus Warn": {
+    "prefix": "lw",
+    "body": "logrus.Warnf(\"Failed to ${1:action}>> %v\", err)",
+    "description": "logrus.Warnf with error"
+  },
+  "Logrus Error": {
+    "prefix": "le",
+    "body": "logrus.Errorf(\"Failed to ${1:action}>> %v\", err)",
+    "description": "logrus.Errorf with error"
+  },
+  "Logrus Info": {
+    "prefix": "li",
+    "body": "logrus.Infof(\"${1:message}>> %v\", ${2:value})",
+    "description": "logrus.Infof"
+  },
+  "Logrus Debug": {
+    "prefix": "ld",
+    "body": "logrus.Debugf(\"${1:message}>> %v\", ${2:value})",
+    "description": "logrus.Debugf"
+  },
+  "Logrus Fatal": {
+    "prefix": "lf",
+    "body": "logrus.Fatalf(\"${1:message}>> %v\", ${2:value})",
+    "description": "logrus.Fatalf"
+  },
+  "Logrus WithFields": {
+    "prefix": "lwf",
+    "body": [
+      "logrus.WithFields(logrus.Fields{",
+      "\t\"${1:key}\": ${2:value},",
+      "}).${3|Info,Warn,Error,Debug|}f(\"${4:message}\")"
+    ],
+    "description": "logrus.WithFields"
+  },
+  "If err logrus": {
+    "prefix": "iferrl",
+    "body": [
+      "if err != nil {",
+      "\tlogrus.Errorf(\"Failed to ${1:action}>> %v\", err)",
+      "\treturn ${0}",
+      "}"
+    ],
+    "description": "if err != nil with logrus.Errorf and return"
+  }
+}

@@ -17,6 +17,11 @@ C.projects = {
 - Use `context.Context` as first parameter in functions that do I/O
 - Flag goroutines without cancellation or timeout as CONCERN
 
+## Logging
+ - Prefer logging using >>, like this:logrus.Errorf("Failed to xxx>> %v", err), or return res, fmt.Errorf("waterinsight GET /getHourlyConsumption failed >> %w", err)
+ - All routes must log warnings using logrus: logrus.Warnf("Failed to xxx>> %v", err)
+
+
 ## Codebase Consistency
 - Review changes against existing patterns in the repo (naming, error handling, structure)
 - Flag deviations from established conventions in neighboring files as SUGGESTION

@@ -1,0 +1,20 @@
+{
+  "Vue SFC": {
+    "prefix": "vue",
+    "body": [
+      "<template>",
+      "\t<div class=\"${1:container}\">",
+      "\t\t${2:content}",
+      "\t</div>",
+      "</template>",
+      "",
+      "<script setup lang=\"ts\">",
+      "",
+      "</script>",
+      "",
+      "<style lang=\"scss\">",
+      "</style>"
+    ],
+    "description": "Vue single file component with script setup, TypeScript, and SCSS"
+  }
+}

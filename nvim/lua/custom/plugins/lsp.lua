@@ -154,7 +154,6 @@ return {
       })
       vim.lsp.enable("typos_lsp")
 
-      local util = require("lspconfig.util")
       local vue_language_server_path = vim.fn.stdpath("data")
         .. "/mason/packages/vue-language-server/node_modules/@vue/language-server"
 
@@ -175,41 +174,10 @@ return {
             },
           },
         },
-      })
-
-      vim.api.nvim_create_autocmd("FileType", {
-        pattern = { "typescript", "javascript", "javascriptreact", "typescriptreact", "vue" },
-        callback = function(args)
-          local fname = vim.api.nvim_buf_get_name(args.buf)
+        on_attach = function(client, bufnr)
+          local fname = vim.api.nvim_buf_get_name(bufnr)
           if fname:match("%.cy%.ts$") then
-            return
-          end
-
-          local root = util.root_pattern("tsconfig.json", "package.json", "jsconfig.json", ".git")(fname)
-          if root then
-            local client_id = vim.lsp.start({
-              name = "vtsls",
-              cmd = { "vtsls", "--stdio" },
-              root_dir = root,
-              settings = {
-                vtsls = {
-                  enableMoveToFileCodeAction = false, -- Disabled due to TS 5.8.3 bug
-                  tsserver = {
-                    globalPlugins = {
-                      {
-                        name = "@vue/typescript-plugin",
-                        location = vue_language_server_path,
-                        languages = { "vue" },
-                        configNamespace = "typescript",
-                      },
-                    },
-                  },
-                },
-              },
-            })
-            if client_id then
-              vim.lsp.buf_attach_client(args.buf, client_id)
-            end
+            vim.lsp.buf_detach_client(bufnr, client.id)
           end
         end,
       })

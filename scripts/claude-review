@@ -48,6 +48,7 @@ Options:
   --staged          Review staged changes only
   --unstaged        Review unstaged changes to tracked files only
   --base [<branch>] Review diff against a base branch (auto-detects default branch if omitted)
+  --include-tests   Include test files (excluded by default)
   --opus            Use Opus (slower, more thorough)
   --help            Show this help message
 
@@ -60,12 +61,14 @@ EOF
 MODE="all"
 BASE_BRANCH=""
 FILE_ARGS=()
+INCLUDE_TESTS=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --all)     MODE="all"; shift ;;
     --staged)  MODE="staged"; shift ;;
     --unstaged) MODE="unstaged"; shift ;;
+    --include-tests) INCLUDE_TESTS=true; shift ;;
     --opus)    MODEL="claude-opus-4-6"; shift ;;
     --base)
       MODE="base"
@@ -137,6 +140,28 @@ EXCLUDE_PATHS=(
   "*.generated.*"
   "*.snap"
 )
+
+if [[ "$INCLUDE_TESTS" == false ]]; then
+  EXCLUDE_PATHS+=(
+    "*_test.go"
+    "*_test.py"
+    "*.test.js"
+    "*.test.ts"
+    "*.test.jsx"
+    "*.test.tsx"
+    "*.spec.js"
+    "*.spec.ts"
+    "*.spec.jsx"
+    "*.spec.tsx"
+    "test_*.py"
+    "tests/"
+    "__tests__/"
+    "testdata/"
+    "e2e/"
+    "*.e2e.js"
+    "*.e2e.ts"
+  )
+fi
 
 DIFF_EXCLUDE=()
 for p in "${EXCLUDE_PATHS[@]}"; do
@@ -247,7 +272,7 @@ spinner &
 SPINNER_PID=$!
 
 CLAUDE_EXIT=0
-echo "$DIFF" | claude -p --model "$MODEL" "$PROMPT" > "$OUTFILE" 2>&1 || CLAUDE_EXIT=$?
+echo "$DIFF" | env -u ANTHROPIC_API_KEY claude -p --model "$MODEL" "$PROMPT" > "$OUTFILE" 2>&1 || CLAUDE_EXIT=$?
 
 stop_spinner
 

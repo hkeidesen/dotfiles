@@ -1,79 +1,36 @@
 #!/usr/bin/env sh
 
-# -------------
-# Core layout
-# -------------
-yabai -m config layout bsp
-yabai -m config window_placement second_child
-yabai -m config auto_balance on
-yabai -m config split_ratio 0.60
+# Layout
+yabai -m config layout                 bsp
+yabai -m config window_placement       second_child
+yabai -m config auto_balance           off
+yabai -m config split_ratio            0.50
 
-# -------------
-# Edges vs gaps
-#   - No padding to screen edges
-#   - Keep space between windows
-# -------------
-yabai -m config top_padding 0
-yabai -m config bottom_padding 0
-yabai -m config left_padding 0
-yabai -m config right_padding 0
-yabai -m config window_gap 12
+# Gaps
+yabai -m config top_padding            0
+yabai -m config bottom_padding         0
+yabai -m config left_padding           0
+yabai -m config right_padding          0
+yabai -m config window_gap             12
 
-# If you run a top bar (e.g., SketchyBar), uncomment:
-# yabai -m config top_padding 36
+# Mouse
+yabai -m config mouse_drop_action      stack
+yabai -m config mouse_modifier         alt
+yabai -m config mouse_action1          move
+yabai -m config mouse_action2          resize
 
-# -------------
-# Mouse controls
-#   alt + left-click drag  → move window
-#   alt + right-click drag → resize window
-#   dropping a window onto another → stack (tabbed)
-# -------------
-yabai -m config mouse_drop_action stack
-yabai -m config mouse_modifier alt
-yabai -m config mouse_action1 move
-yabai -m config mouse_action2 resize
-
-# -------------
-# Focus behavior (optional – comment out if you don't like it)
-# -------------
-# yabai -m config focus_follows_mouse autoraise
-
-# -------------
-# Common rules (float/unmanage some apps)
-# -------------
+# Rules — float these apps
 for app in "System Settings" "Finder" "Preview" "Music" "1Password" "Messages" "Session" "Raycast" "Google Chrome for Testing"; do
   yabai -m rule --add app="^$app$" manage=off
 done
-
-# Float generic dialogs / preferences windows
 yabai -m rule --add role="AXDialog" manage=off
 yabai -m rule --add title="Preferences" manage=off
 
-# Example: make Messages sticky across spaces (optional)
-# yabai -m rule --add app="^Messages$" sticky=on manage=off
+# WezTerm — always tiled
+yabai -m rule --add app="^WezTerm$" manage=on
 
-# -------------
-# QoL signals
-# -------------
-# Center newly created floating windows (e.g., dialogs, unmanaged apps)
-yabai -m signal --add event=window_created action='
-  if [ "$(yabai -m query --windows --window | jq ".floating")" -eq 1 ]; then
-    yabai -m window --grid 4:4:1:1:2:2
-  fi
-'
-
-# Keep layout tidy after closing/moving windows (auto_balance already helps;
-# this extra rebalance only runs when a managed window is destroyed)
-yabai -m signal --add event=window_destroyed action='yabai -m space --balance'
-
-# -------------
-# Per-space examples (optional)
-# -------------
-# Make Space 1 tiled and Space 2 floating:
-# yabai -m space 1 --layout bsp
-# yabai -m space 2 --layout float
-
-# -------------
-# Helper: reload on change (uncomment if you edit frequently and use launchd)
-# -------------
-# launchctl stop org.yabai.yabai; launchctl start org.yabai.yabai
+# Auto-focus WezTerm on space switch
+yabai -m signal --add event=space_changed action='
+  WT_ID=$(yabai -m query --windows --space | jq "[.[] | select(.app==\"WezTerm\" and .\"is-minimized\"==false)][0].id // empty" -r)
+  [ -n "$WT_ID" ] && yabai -m window --focus "$WT_ID"
+' 2>/dev/null
