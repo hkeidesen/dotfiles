@@ -20,6 +20,7 @@ raycast/extensions/
 karabiner/automatic_backups/
 github-copilot/
 plugins/
+!nvim/lua/custom/plugins/
 node_modules/
 *.map
 .claude-reviews/
