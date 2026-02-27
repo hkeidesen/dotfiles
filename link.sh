@@ -38,6 +38,6 @@ ln -sfn "$PWD/karabiner" "$HOME/.config/karabiner"
 ln -sfn "$PWD/lnav" "$HOME/.config/lnav"
 ln -sfn "$PWD/gh" "$HOME/.config/gh"
 ln -sfn "$PWD/raycast" "$HOME/.config/raycast"
-ln -sfn "$PWD/plugins" "$HOME/.config/plugins"
+ln -sfn "$PWD/broot" "$HOME/.config/broot"
 
 echo "✨ All symlinks created!"

@@ -14,3 +14,12 @@ gh/hosts.yml
 lnav/configs/default/
 lnav/formats/default/
 lnav/*.history
+
+# Auto-generated / auto-downloaded
+raycast/extensions/
+karabiner/automatic_backups/
+github-copilot/
+plugins/
+node_modules/
+*.map
+.claude-reviews/
