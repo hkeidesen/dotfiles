@@ -486,23 +486,6 @@ require("lazy").setup({
   },
 })
 
--- Scroll past EOF: keep cursor centered with j/k/G
--- Uses normal! to bypass luxmotion scroll animation
-vim.keymap.set("n", "j", function()
-  vim.cmd("normal! " .. vim.v.count1 .. "jzz")
-end, { desc = "j with EOF centering" })
-
-vim.keymap.set("n", "k", function()
-  vim.cmd("normal! " .. vim.v.count1 .. "kzz")
-end, { desc = "k with EOF centering" })
-
-vim.keymap.set("n", "G", function()
-  if vim.v.count > 0 then
-    vim.cmd("normal! " .. vim.v.count .. "Gzz")
-  else
-    vim.cmd("normal! Gzz")
-  end
-end, { desc = "G with EOF centering" })
 
 local minimal_diagnostics = {
   virtual_text = {
@@ -614,10 +597,31 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
       timer:stop()
       timer:close()
       line_hl_timers[bufnr] = nil
-      if vim.api.nvim_buf_is_valid(bufnr) then
+      if vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_get_mode().mode:sub(1, 1) ~= "i" then
         refresh_line_hl(bufnr)
       end
     end))
+  end,
+})
+
+-- Hide diagnostics in insert mode, restore on leave (save/restore view to prevent scroll jump)
+local diag_insert_group = vim.api.nvim_create_augroup("diag_insert_toggle", { clear = true })
+vim.api.nvim_create_autocmd("InsertEnter", {
+  group = diag_insert_group,
+  callback = function(args)
+    local view = vim.fn.winsaveview()
+    vim.diagnostic.config({ virtual_text = false, virtual_lines = false })
+    vim.api.nvim_buf_clear_namespace(args.buf, line_hl_ns, 0, -1)
+    vim.fn.winrestview(view)
+  end,
+})
+vim.api.nvim_create_autocmd("InsertLeave", {
+  group = diag_insert_group,
+  callback = function(args)
+    local view = vim.fn.winsaveview()
+    vim.diagnostic.config(is_minimal and minimal_diagnostics or detailed_diagnostics)
+    refresh_line_hl(args.buf)
+    vim.fn.winrestview(view)
   end,
 })
 
