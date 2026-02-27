@@ -155,7 +155,7 @@ end, { desc = "Toggle number/relativenumber and indent guides" })
 vim.keymap.set("n", "<C-d>", "<C-d>zz")
 vim.keymap.set("n", "<C-u>", "<C-u>zz")
 vim.keymap.set("n", "<C-f>", "<C-d>zz")
-vim.keymap.set("n", "<C-b>", "<C-d>zz")
+vim.keymap.set("n", "<C-b>", "<C-u>zz")
 
 --Close all buffers but keep current
 vim.keymap.set(
@@ -174,8 +174,19 @@ vim.opt.inccommand = "split"
 -- Show which line your cursor is on
 vim.opt.cursorline = true
 
+vim.api.nvim_create_autocmd("InsertEnter", {
+  callback = function()
+    vim.opt.cursorline = false
+  end,
+})
+vim.api.nvim_create_autocmd("InsertLeave", {
+  callback = function()
+    vim.opt.cursorline = true
+  end,
+})
+
 -- Minimal number of screen lines to keep above and below the cursor.
-vim.opt.scrolloff = 10
+vim.opt.scrolloff = 999
 vim.keymap.set("v", "<", "<gv", { noremap = true, silent = true })
 vim.keymap.set("v", ">", ">gv", { noremap = true, silent = true })
 
@@ -195,8 +206,10 @@ vim.keymap.set("n", "<C-q>", vim.diagnostic.setloclist, { desc = "Open diagnosti
 vim.api.nvim_create_autocmd("TermOpen", {
   group = vim.api.nvim_create_augroup("custom-term-open", { clear = true }),
   callback = function()
-    vim.opt.number = false
-    vim.opt.relativenumber = false
+    vim.opt_local.number = false
+    vim.opt_local.relativenumber = false
+    vim.opt_local.scrolloff = 0
+    vim.opt_local.signcolumn = "no"
   end,
 })
 
@@ -237,32 +250,6 @@ vim.api.nvim_create_autocmd("TextYankPost", {
   group = vim.api.nvim_create_augroup("kickstart-highlight-yank", { clear = true }),
   callback = function()
     vim.highlight.on_yank()
-  end,
-})
-
-vim.api.nvim_create_autocmd("BufWritePre", {
-  pattern = "*.go",
-  callback = function()
-    local client = vim.lsp.get_clients({ bufnr = 0 })[1]
-    if not client then
-      return
-    end
-
-    local params = vim.lsp.util.make_range_params(nil, client.offset_encoding)
-    params.context = { only = { "source.organizeImports" } }
-
-    local result = vim.lsp.buf_request_sync(0, "textDocument/codeAction", params)
-
-    for cid, res in pairs(result or {}) do
-      for _, r in pairs(res.result or {}) do
-        if r.edit then
-          local enc = (vim.lsp.get_client_by_id(cid) or {}).offset_encoding or "utf-16"
-          vim.lsp.util.apply_workspace_edit(r.edit, enc)
-        end
-      end
-    end
-
-    vim.lsp.buf.format({ async = false })
   end,
 })
 
@@ -360,7 +347,10 @@ require("lazy").setup({
       vim.o.foldenable = true
     end,
     opts = {
-      provider_selector = function()
+      provider_selector = function(_, _, buftype)
+        if buftype == "terminal" then
+          return ""
+        end
         return { "treesitter", "indent" }
       end,
       preview = {
@@ -449,6 +439,9 @@ require("lazy").setup({
       auto_install = true,
       highlight = {
         enable = true,
+        disable = function(_, bufnr)
+          return vim.bo[bufnr].buftype == "terminal"
+        end,
       },
       indent = { enable = true },
       textobjects = {
@@ -492,6 +485,24 @@ require("lazy").setup({
     },
   },
 })
+
+-- Scroll past EOF: keep cursor centered with j/k/G
+-- Uses normal! to bypass luxmotion scroll animation
+vim.keymap.set("n", "j", function()
+  vim.cmd("normal! " .. vim.v.count1 .. "jzz")
+end, { desc = "j with EOF centering" })
+
+vim.keymap.set("n", "k", function()
+  vim.cmd("normal! " .. vim.v.count1 .. "kzz")
+end, { desc = "k with EOF centering" })
+
+vim.keymap.set("n", "G", function()
+  if vim.v.count > 0 then
+    vim.cmd("normal! " .. vim.v.count .. "Gzz")
+  else
+    vim.cmd("normal! Gzz")
+  end
+end, { desc = "G with EOF centering" })
 
 local minimal_diagnostics = {
   virtual_text = {

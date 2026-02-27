@@ -68,6 +68,7 @@ plugins=(
 
 # Source Oh My Zsh (once!)
 source "$ZSH/oh-my-zsh.sh"
+export KEYTIMEOUT=1  # 10ms ESC delay for snappy vi-mode switching
 
 # ------------------------------------------------------------------------------
 # 4) Prompt — Starship (after OMZ, once)
@@ -79,19 +80,17 @@ command -v starship >/dev/null 2>&1 && eval "$(starship init zsh)"
 # ------------------------------------------------------------------------------
 export NVM_DIR="$HOME/.nvm"
 
-_load_nvm() {
-  unset -f nvm node npm npx pnpm
-  if [ -s "$NVM_DIR/nvm.sh" ]; then
-    . "$NVM_DIR/nvm.sh"
-    [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
-  fi
+__init_nvm() {
+  unset -f __init_nvm nvm node npm npx pnpm
+  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+  [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
 }
 
-nvm()  { _load_nvm; nvm "$@"; }
-node() { _load_nvm; node "$@"; }
-npm()  { _load_nvm; npm "$@"; }
-npx()  { _load_nvm; npx "$@"; }
-pnpm() { _load_nvm; pnpm "$@"; }
+nvm()  { __init_nvm; nvm "$@"; }
+node() { __init_nvm; node "$@"; }
+npm()  { __init_nvm; npm "$@"; }
+npx()  { __init_nvm; npx "$@"; }
+pnpm() { __init_nvm; pnpm "$@"; }
 
 # ------------------------------------------------------------------------------
 # 6) fzf, zoxide, broot
@@ -136,6 +135,15 @@ zstyle ':completion:*:options'      description 'describe'
 # ------------------------------------------------------------------------------
 bindkey '^[[A' up-line-or-history
 bindkey '^[[B' down-line-or-history
+_accept_or_complete() {
+  if [[ -n "$POSTDISPLAY" ]]; then
+    zle autosuggest-accept
+  else
+    zle expand-or-complete
+  fi
+}
+zle -N _accept_or_complete
+bindkey '\t' _accept_or_complete
 
 # ------------------------------------------------------------------------------
 # 11) Aliases

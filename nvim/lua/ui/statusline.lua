@@ -31,6 +31,13 @@ local function setup_statusline_highlights()
   vim.api.nvim_set_hl(0, "StatuslineInfo", { fg = "#7dcfff", bold = true, bg = "NONE", force = true }) -- soft cyan
   vim.api.nvim_set_hl(0, "StatuslineComment", { fg = "#9aa5ce", bold = true, bg = "NONE", force = true }) -- soft gray
   vim.api.nvim_set_hl(0, "StatuslineScrollbar", { fg = "#bb9af7", bold = true, bg = "NONE", force = true }) -- soft purple
+  -- Mode highlights (colored bg pill)
+  vim.api.nvim_set_hl(0, "StatuslineModeNormal",  { fg = "#1a1b26", bg = "#7aa2f7", bold = true, force = true })
+  vim.api.nvim_set_hl(0, "StatuslineModeInsert",  { fg = "#1a1b26", bg = "#9ece6a", bold = true, force = true })
+  vim.api.nvim_set_hl(0, "StatuslineModeVisual",  { fg = "#1a1b26", bg = "#bb9af7", bold = true, force = true })
+  vim.api.nvim_set_hl(0, "StatuslineModeReplace", { fg = "#1a1b26", bg = "#f7768e", bold = true, force = true })
+  vim.api.nvim_set_hl(0, "StatuslineModeCommand", { fg = "#1a1b26", bg = "#e0af68", bold = true, force = true })
+  vim.api.nvim_set_hl(0, "StatuslineModeTerminal",{ fg = "#1a1b26", bg = "#7dcfff", bold = true, force = true })
 end
 
 -- Set up highlights on load
@@ -70,6 +77,45 @@ vim.api.nvim_create_user_command("Reload", function()
   print("Configuration reloaded!")
 end, { desc = "Reload Neovim configuration" })
 
+-- Mode map: short label + highlight group
+local MODE_MAP = {
+  ["n"]     = { "NORMAL",  "StatuslineModeNormal" },
+  ["no"]    = { "O-PEND",  "StatuslineModeNormal" },
+  ["nov"]   = { "O-PEND",  "StatuslineModeNormal" },
+  ["noV"]   = { "O-PEND",  "StatuslineModeNormal" },
+  ["no\22"] = { "O-PEND",  "StatuslineModeNormal" },
+  ["niI"]   = { "NORMAL",  "StatuslineModeNormal" },
+  ["niR"]   = { "NORMAL",  "StatuslineModeNormal" },
+  ["niV"]   = { "NORMAL",  "StatuslineModeNormal" },
+  ["nt"]    = { "NORMAL",  "StatuslineModeNormal" },
+  ["v"]     = { "VISUAL",  "StatuslineModeVisual" },
+  ["vs"]    = { "VISUAL",  "StatuslineModeVisual" },
+  ["V"]     = { "V-LINE",  "StatuslineModeVisual" },
+  ["Vs"]    = { "V-LINE",  "StatuslineModeVisual" },
+  ["\22"]   = { "V-BLCK",  "StatuslineModeVisual" },
+  ["\22s"]  = { "V-BLCK",  "StatuslineModeVisual" },
+  ["s"]     = { "SELECT",  "StatuslineModeVisual" },
+  ["S"]     = { "S-LINE",  "StatuslineModeVisual" },
+  ["\19"]   = { "S-BLCK",  "StatuslineModeVisual" },
+  ["i"]     = { "INSERT",  "StatuslineModeInsert" },
+  ["ic"]    = { "INSERT",  "StatuslineModeInsert" },
+  ["ix"]    = { "INSERT",  "StatuslineModeInsert" },
+  ["R"]     = { "RPLACE",  "StatuslineModeReplace" },
+  ["Rc"]    = { "RPLACE",  "StatuslineModeReplace" },
+  ["Rx"]    = { "RPLACE",  "StatuslineModeReplace" },
+  ["Rv"]    = { "V-RPLC",  "StatuslineModeReplace" },
+  ["Rvc"]   = { "V-RPLC",  "StatuslineModeReplace" },
+  ["Rvx"]   = { "V-RPLC",  "StatuslineModeReplace" },
+  ["c"]     = { "COMAND",  "StatuslineModeCommand" },
+  ["cv"]    = { "EX",      "StatuslineModeCommand" },
+  ["ce"]    = { "EX",      "StatuslineModeCommand" },
+  ["r"]     = { "PROMPT",  "StatuslineModeCommand" },
+  ["rm"]    = { "MORE",    "StatuslineModeCommand" },
+  ["r?"]    = { "CONFRM",  "StatuslineModeCommand" },
+  ["!"]     = { "SHELL",   "StatuslineModeCommand" },
+  ["t"]     = { "TERMNL",  "StatuslineModeTerminal" },
+}
+
 local HL = {
   branch = { "StatuslineBranch", icons.branch },
   file = { "StatuslineFile", icons.node },
@@ -88,6 +134,7 @@ for k, v in pairs(HL) do
 end
 
 local ORDER = {
+  "mode",
   "path",
   "venv",
   "gotest",
@@ -296,6 +343,9 @@ local function diagnostics_widget()
 end
 
 local function fileinfo_widget()
+  if bo.buftype == "terminal" then
+    return ""
+  end
   local ft = get_opt("filetype", {})
   local lines = tools.group_number(api.nvim_buf_line_count(0), ",")
   local str = ICON.fileinfo .. " "
@@ -347,7 +397,16 @@ local function go_test_widget()
   return ""
 end
 
+local function mode_widget()
+  local mode = api.nvim_get_mode().mode
+  local m = MODE_MAP[mode] or MODE_MAP[mode:sub(1, 1)] or { "NORMAL", "StatuslineModeNormal" }
+  return string.format("%%#%s# %s %%*", m[2], m[1])
+end
+
 local function scrollbar_widget()
+  if bo.buftype == "terminal" then
+    return ""
+  end
   local cur = api.nvim_win_get_cursor(0)[1]
   local total = api.nvim_buf_line_count(0)
   local idx = math.floor((cur - 1) / math.max(total, 1) * #SBAR) + 1
@@ -359,6 +418,10 @@ end
 -- render
 -- ───────────────────────────────────────────────────────────
 function M.render()
+  if bo.buftype == "terminal" then
+    return " " .. mode_widget() .. "  %=" .. " "
+  end
+
   local fname = api.nvim_buf_get_name(0)
   local root = (bo.buftype == "" and tools.get_path_root(fname)) or nil
   if bo.buftype ~= "" and bo.buftype ~= "help" then
@@ -368,6 +431,7 @@ function M.render()
   local buf = api.nvim_win_get_buf(vim.g.statusline_winid)
 
   local parts = {
+    mode = mode_widget(),
     path = path_widget(root, fname),
     venv = venv_widget(),
     gotest = go_test_widget(),
@@ -392,6 +456,13 @@ api.nvim_create_autocmd("User", {
   group = aug,
   pattern = "GitsignsStatusUpdated",
   callback = function()
+    vim.cmd("redrawstatus")
+  end,
+})
+api.nvim_create_autocmd("ModeChanged", {
+  group = aug,
+  callback = function()
+    if bo.buftype == "terminal" then return end
     vim.cmd("redrawstatus")
   end,
 })

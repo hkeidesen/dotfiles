@@ -16,6 +16,31 @@
                                 "type": "basic"
                             }
                         ]
+                    },
+                    {
+                        "description": "Right option + hjkl → F13-F16 (tmux pane nav via WezTerm)",
+                        "manipulators": [
+                            {
+                                "from": { "key_code": "h", "modifiers": { "mandatory": ["right_option"] } },
+                                "to": [{ "key_code": "f13" }],
+                                "type": "basic"
+                            },
+                            {
+                                "from": { "key_code": "j", "modifiers": { "mandatory": ["right_option"] } },
+                                "to": [{ "key_code": "f14" }],
+                                "type": "basic"
+                            },
+                            {
+                                "from": { "key_code": "k", "modifiers": { "mandatory": ["right_option"] } },
+                                "to": [{ "key_code": "f15" }],
+                                "type": "basic"
+                            },
+                            {
+                                "from": { "key_code": "l", "modifiers": { "mandatory": ["right_option"] } },
+                                "to": [{ "key_code": "f16" }],
+                                "type": "basic"
+                            }
+                        ]
                     }
                 ]
             },

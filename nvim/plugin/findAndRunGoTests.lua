@@ -1,4 +1,12 @@
--- lua/plugin/findAndRunGoTests.lua
+-- plugin/findAndRunGoTests.lua
+
+-- Module-level state for cancellation & debounce
+local current_handle = nil
+local current_stdout = nil
+local current_stderr = nil
+local current_is_running = false -- shared flag to stop the spinner
+local debounce_timer = nil
+local DEBOUNCE_MS = 1000
 
 local function find_test_file()
   local current_file = vim.fn.expand("%:p")
@@ -37,6 +45,24 @@ end
 
 local spinners = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
 
+--- Kill the currently running test process (if any) and stop its spinner.
+local function cancel_current_run()
+  -- Stop the spinner of the previous run
+  current_is_running = false
+
+  if current_handle then
+    -- Kill the process group so child processes (go compile, etc.) also die
+    if not current_handle:is_closing() then
+      current_handle:kill("sigkill")
+    end
+    -- The exit callback will close pipes and handle cleanup.
+    -- Nil out refs so the exit callback knows it was cancelled.
+    current_handle = nil
+    current_stdout = nil
+    current_stderr = nil
+  end
+end
+
 local function run_relevant_go_test()
   -- Skip if buffer doesn't have a valid file path
   local current_file = vim.fn.expand("%:p")
@@ -54,23 +80,28 @@ local function run_relevant_go_test()
     return
   end
 
+  -- Cancel any in-flight run before starting a new one
+  cancel_current_run()
+
   local file_dir = vim.fn.fnamemodify(test_file, ":h")
   local total_tests, running_tests, failed_tests = 0, 0, 0
-  local is_running = true
+  current_is_running = true
+  local is_running_ref = true -- local ref so the spinner closure captures it
   local spinner_index = 1
   local build_failed = false
   local compilation_errors = {}
   local start_time = os.time()
 
   local function update_spinner()
-    if not is_running then
+    if not current_is_running or not is_running_ref then
       return
     end
 
     -- Check for timeout after 10 seconds
     if os.time() - start_time > 10 then
       vim.g.go_test_status = "⏱️ Test timeout"
-      is_running = false
+      is_running_ref = false
+      current_is_running = false
       return
     end
 
@@ -94,6 +125,8 @@ local function run_relevant_go_test()
 
   local stdout = vim.loop.new_pipe(false)
   local stderr = vim.loop.new_pipe(false)
+  current_stdout = stdout
+  current_stderr = stderr
 
   local function process_output(data)
     if not data then
@@ -126,35 +159,33 @@ local function run_relevant_go_test()
           running_tests = running_tests - 1
         end
       end
-
-      vim.g.go_test_status = string.format(
-        "%s Running... %d/%d | 🔥 %d failed",
-        spinners[spinner_index],
-        running_tests,
-        total_tests,
-        failed_tests
-      )
-
-      vim.schedule(function()
-        vim.cmd("redrawstatus")
-      end)
+      -- No redrawstatus here — the spinner (100ms interval) picks up counter changes
     end
   end
-
-  -- Get just the filename for the test file
-  local test_filename = vim.fn.fnamemodify(test_file, ":t")
 
   local handle
   handle = vim.loop.spawn("go", {
     args = { "test", "-v", "." },
-    -- args = { "test", "-v", test_filename },
     cwd = file_dir,
     stdio = { nil, stdout, stderr },
   }, function(code)
-    is_running = false
-    stdout:close()
-    stderr:close()
-    handle:close()
+    is_running_ref = false
+    current_is_running = false
+    if not stdout:is_closing() then
+      stdout:close()
+    end
+    if not stderr:is_closing() then
+      stderr:close()
+    end
+    if not handle:is_closing() then
+      handle:close()
+    end
+    -- Clear module refs if this is still the active run
+    if current_handle == handle then
+      current_handle = nil
+      current_stdout = nil
+      current_stderr = nil
+    end
 
     vim.schedule(function()
       if build_failed then
@@ -180,6 +211,8 @@ local function run_relevant_go_test()
     end)
   end)
 
+  current_handle = handle
+
   vim.loop.read_start(stdout, function(_, data)
     process_output(data)
   end)
@@ -189,11 +222,21 @@ local function run_relevant_go_test()
   end)
 end
 
--- Auto-run relevant tests on save
+-- Auto-run relevant tests on save (debounced)
 vim.api.nvim_create_autocmd("BufWritePost", {
   pattern = "*.go",
   callback = function()
-    pcall(run_relevant_go_test)
+    if debounce_timer then
+      debounce_timer:stop()
+      debounce_timer:close()
+      debounce_timer = nil
+    end
+    debounce_timer = vim.uv.new_timer()
+    debounce_timer:start(DEBOUNCE_MS, 0, vim.schedule_wrap(function()
+      debounce_timer:close()
+      debounce_timer = nil
+      pcall(run_relevant_go_test)
+    end))
   end,
 })
 

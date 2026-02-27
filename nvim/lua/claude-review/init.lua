@@ -38,7 +38,7 @@ local function get_instructions()
 end
 
 local function build_cmd(prompt)
-  local cmd = { "claude", "-p", prompt }
+  local cmd = { "env", "-u", "ANTHROPIC_API_KEY", "claude", "-p", prompt }
   if M.config.model then
     vim.list_extend(cmd, { "--model", M.config.model })
   end
@@ -357,7 +357,12 @@ function M.toggle_auto()
     })
     vim.api.nvim_create_autocmd("CursorHold", {
       group = augroup,
-      callback = debounced_diagnose,
+      callback = function()
+        if vim.bo.buftype ~= "" then
+          return
+        end
+        debounced_diagnose()
+      end,
     })
   end
 

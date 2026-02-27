@@ -1,0 +1,76 @@
+{
+  "React Functional Component": {
+    "prefix": "rfc",
+    "body": [
+      "import React from 'react'",
+      "",
+      "const ${TM_FILENAME_BASE} = (${1:props}) => {",
+      "\treturn (",
+      "\t\t<div>",
+      "\t\t\t${0:Hello World!}",
+      "\t\t</div>",
+      "\t)",
+      "}",
+      "",
+      "export default ${TM_FILENAME_BASE}"
+    ],
+    "description": "React functional component"
+  },
+  "React Component with useState": {
+    "prefix": "rfcs",
+    "body": [
+      "import React, { useState } from 'react'",
+      "",
+      "const ${TM_FILENAME_BASE} = (${1:props}) => {",
+      "\tconst [${2:state}, set${3:State}] = useState(${4:''})",
+      "",
+      "\treturn (",
+      "\t\t<div>",
+      "\t\t\t${0:Hello World!}",
+      "\t\t</div>",
+      "\t)",
+      "}",
+      "",
+      "export default ${TM_FILENAME_BASE}"
+    ],
+    "description": "React component with useState"
+  },
+  "React Component with useEffect": {
+    "prefix": "rfce",
+    "body": [
+      "import React, { useEffect } from 'react'",
+      "",
+      "const ${TM_FILENAME_BASE} = (${1:props}) => {",
+      "\tuseEffect(() => {",
+      "\t\t${2:// effect logic here}",
+      "\t}, [${3}])",
+      "",
+      "\treturn (",
+      "\t\t<div>",
+      "\t\t\t${0:Hello World!}",
+      "\t\t</div>",
+      "\t)",
+      "}",
+      "",
+      "export default ${TM_FILENAME_BASE}"
+    ],
+    "description": "React component with useEffect"
+  },
+  "Simple React Component": {
+    "prefix": "rc",
+    "body": [
+      "import React from 'react'",
+      "",
+      "const ${TM_FILENAME_BASE} = () => {",
+      "\treturn (",
+      "\t\t<div>",
+      "\t\t\t${0:Hello World!}",
+      "\t\t</div>",
+      "\t)",
+      "}",
+      "",
+      "export default ${TM_FILENAME_BASE}"
+    ],
+    "description": "Simple React component"
+  }
+}
