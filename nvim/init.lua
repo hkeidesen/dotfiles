@@ -556,32 +556,9 @@ vim.diagnostic.config({
 })
 
 -- Custom diagnostic line highlights that skip TODO/HACK/FIXME/NOTE lines
-local line_hl_ns = vim.api.nvim_create_namespace("diagnostic_line_hl")
-local skip_pattern = "^%s*[/-]*%s*(%u+):"
-local skip_keywords = { TODO = true, HACK = true, FIXME = true, NOTE = true, INFO = true, XXX = true }
-
-local function refresh_line_hl(bufnr)
-  vim.api.nvim_buf_clear_namespace(bufnr, line_hl_ns, 0, -1)
-  local best = {}
-  for _, d in ipairs(vim.diagnostic.get(bufnr)) do
-    if d.severity <= vim.diagnostic.severity.WARN then
-      if not best[d.lnum] or d.severity < best[d.lnum] then
-        best[d.lnum] = d.severity
-      end
-    end
-  end
-  local line_count = vim.api.nvim_buf_line_count(bufnr)
-  for lnum, sev in pairs(best) do
-    if lnum < line_count then
-      local text = (vim.api.nvim_buf_get_lines(bufnr, lnum, lnum + 1, false)[1] or "")
-      local keyword = text:match(skip_pattern)
-      if not (keyword and skip_keywords[keyword]) then
-        local hl = sev == vim.diagnostic.severity.ERROR and "DiagnosticLineError" or "DiagnosticLineWarn"
-        vim.api.nvim_buf_set_extmark(bufnr, line_hl_ns, lnum, 0, { line_hl_group = hl, priority = 10 })
-      end
-    end
-  end
-end
+local diag_line_hl = require("custom.diagnostic_line_hl")
+local line_hl_ns = diag_line_hl.ns
+local refresh_line_hl = diag_line_hl.refresh
 
 local line_hl_timers = {}
 vim.api.nvim_create_autocmd("DiagnosticChanged", {

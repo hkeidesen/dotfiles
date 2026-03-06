@@ -99,8 +99,8 @@ pnpm() { __init_nvm; pnpm "$@"; }
 
 command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
 
-[ -f "$HOME/.config/broot/launcher/zsh/br" ] && \
-  source "$HOME/.config/broot/launcher/zsh/br"
+{ [ -f "$HOME/.config/broot/launcher/zsh/br" ] && source "$HOME/.config/broot/launcher/zsh/br" } || \
+  { [ -f "$HOME/.config/broot/launcher/bash/br" ] && source "$HOME/.config/broot/launcher/bash/br" }
 
 # ------------------------------------------------------------------------------
 # 7) History
@@ -223,3 +223,5 @@ _auto_track_dotfiles() {
 # 14) Profiling output (uncomment if zprof is enabled above)
 # ------------------------------------------------------------------------------
 # zprof
+
+source /Users/hans-kristian.norum/.config/broot/launcher/bash/br

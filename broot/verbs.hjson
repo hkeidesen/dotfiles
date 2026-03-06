@@ -25,11 +25,18 @@ verbs: [
     #    execution: "nvim +{line} {file}"
     #    execution: "helix {file}:{line}"
     {
+        key: enter
+        apply_to: directory
+        external: "cd {directory}"
+        from_shell: true
+    }
+
+    {
         invocation: edit
         shortcut: e
-        key: ctrl-e
+        key: enter
         apply_to: text_file
-        execution: "$EDITOR {file}"
+        execution: "nvim +{line} {file}"
         leave_broot: false
     }
 

@@ -1,3 +1,20 @@
+local function eslint_fix(bufnr)
+  local client = vim.lsp.get_clients({ name = "eslint", bufnr = bufnr })[1]
+  if not client then return end
+  client:request("textDocument/codeAction", {
+    textDocument = vim.lsp.util.make_text_document_params(bufnr),
+    range = { start = { line = 0, character = 0 }, ["end"] = { line = vim.api.nvim_buf_line_count(bufnr), character = 0 } },
+    context = { only = { "source.fixAll.eslint" }, diagnostics = {} },
+  }, function(_, result)
+    if not result then return end
+    for _, action in ipairs(result) do
+      if action.edit then
+        vim.lsp.util.apply_workspace_edit(action.edit, client.offset_encoding or "utf-16")
+      end
+    end
+  end, bufnr)
+end
+
 return {
   {
     "stevearc/conform.nvim",
@@ -7,6 +24,7 @@ return {
       {
         "<leader>f",
         function()
+          eslint_fix(vim.api.nvim_get_current_buf())
           require("conform").format({ async = true, lsp_fallback = true })
         end,
         mode = { "n", "v" },
@@ -17,8 +35,9 @@ return {
       notify_on_error = false, -- Don't notify when biome fails but prettier succeeds
       notify_no_formatters = true,
 
-      -- Simple format on save with LSP fallback
+      -- ESLint auto-fix + format on save
       format_on_save = function(bufnr)
+        eslint_fix(bufnr)
         if vim.bo[bufnr].filetype == "go" then
           return {
             timeout_ms = 3000,

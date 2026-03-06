@@ -19,19 +19,8 @@ local icons = tools.ui.icons
 -- HL + ICON setup
 -- ───────────────────────────────────────────────────────────
 
--- Define custom highlight groups for better visibility with transparent backgrounds
-local function setup_statusline_highlights()
-  -- Custom subtle but visible colors for statusline components
-  vim.api.nvim_set_hl(0, "StatuslineBranch", { fg = "#7aa2f7", bold = true, bg = "NONE", force = true }) -- soft blue
-  vim.api.nvim_set_hl(0, "StatuslineFile", { fg = "#c0caf5", bold = true, bg = "NONE", force = true }) -- soft white
-  vim.api.nvim_set_hl(0, "StatuslineFileinfo", { fg = "#9ece6a", bold = true, bg = "NONE", force = true }) -- soft green
-  vim.api.nvim_set_hl(0, "StatuslineModified", { fg = "#f7768e", bold = true, bg = "NONE", force = true }) -- soft red
-  vim.api.nvim_set_hl(0, "StatuslineWarn", { fg = "#e0af68", bold = true, bg = "NONE", force = true }) -- soft yellow
-  vim.api.nvim_set_hl(0, "StatuslineError", { fg = "#f7768e", bold = true, bg = "NONE", force = true }) -- soft red
-  vim.api.nvim_set_hl(0, "StatuslineInfo", { fg = "#7dcfff", bold = true, bg = "NONE", force = true }) -- soft cyan
-  vim.api.nvim_set_hl(0, "StatuslineComment", { fg = "#9aa5ce", bold = true, bg = "NONE", force = true }) -- soft gray
-  vim.api.nvim_set_hl(0, "StatuslineScrollbar", { fg = "#bb9af7", bold = true, bg = "NONE", force = true }) -- soft purple
-  -- Mode highlights (colored bg pill)
+-- Mode pill highlights (need custom bg colors — everything else uses standard groups)
+local function setup_mode_highlights()
   vim.api.nvim_set_hl(0, "StatuslineModeNormal",  { fg = "#1a1b26", bg = "#7aa2f7", bold = true, force = true })
   vim.api.nvim_set_hl(0, "StatuslineModeInsert",  { fg = "#1a1b26", bg = "#9ece6a", bold = true, force = true })
   vim.api.nvim_set_hl(0, "StatuslineModeVisual",  { fg = "#1a1b26", bg = "#bb9af7", bold = true, force = true })
@@ -39,22 +28,7 @@ local function setup_statusline_highlights()
   vim.api.nvim_set_hl(0, "StatuslineModeCommand", { fg = "#1a1b26", bg = "#e0af68", bold = true, force = true })
   vim.api.nvim_set_hl(0, "StatuslineModeTerminal",{ fg = "#1a1b26", bg = "#7dcfff", bold = true, force = true })
 end
-
--- Set up highlights on load
-setup_statusline_highlights()
-
--- Force refresh highlights after a short delay to ensure they take effect
-vim.defer_fn(function()
-  setup_statusline_highlights()
-  vim.cmd("redrawstatus")
-end, 100)
-
--- Add a command to manually refresh statusline highlights
-vim.api.nvim_create_user_command("StatuslineRefresh", function()
-  setup_statusline_highlights()
-  vim.cmd("redrawstatus")
-  print("Statusline highlights refreshed")
-end, {})
+setup_mode_highlights()
 
 -- Add a command to reload the entire Neovim configuration
 vim.api.nvim_create_user_command("Reload", function()
@@ -117,15 +91,15 @@ local MODE_MAP = {
 }
 
 local HL = {
-  branch = { "StatuslineBranch", icons.branch },
-  file = { "StatuslineFile", icons.node },
-  fileinfo = { "StatuslineFileinfo", icons.document },
-  nomodifiable = { "StatuslineWarn", icons.bullet },
-  modified = { "StatuslineModified", icons.bullet },
-  readonly = { "StatuslineWarn", icons.lock },
-  error = { "StatuslineError", icons.error },
-  warn = { "StatuslineWarn", icons.warning },
-  visual = { "StatuslineInfo", "‹› " },
+  branch = { "DiagnosticOk", icons.branch },
+  file = { "NonText", icons.node },
+  fileinfo = { "Function", icons.document },
+  nomodifiable = { "DiagnosticWarn", icons.bullet },
+  modified = { "DiagnosticError", icons.bullet },
+  readonly = { "DiagnosticWarn", icons.lock },
+  error = { "DiagnosticError", icons.error },
+  warn = { "DiagnosticWarn", icons.warning },
+  visual = { "DiagnosticInfo", "‹› " },
 }
 
 local ICON = {}
@@ -134,6 +108,7 @@ for k, v in pairs(HL) do
 end
 
 local ORDER = {
+  "pad",
   "mode",
   "path",
   "venv",
@@ -143,7 +118,9 @@ local ORDER = {
   "sep",
   "diag",
   "fileinfo",
+  "pad",
   "scrollbar",
+  "pad",
 }
 
 local PAD, SEP = " ", "%="
@@ -223,7 +200,7 @@ local function concat(parts)
       i = i + 1
     end
   end
-  return " " .. table.concat(out, "  ") .. " "
+  return table.concat(out, " ")
 end
 
 local function esc_str(str)
@@ -273,7 +250,7 @@ local function file_icon_and_hl(file_name)
     local icon, hl = mini_icons.get("file", file_name)
     return icon, hl
   end
-  return icons.node, "StatuslineFile"
+  return icons.node, "NonText"
 end
 
 local function path_widget(root, fname)
@@ -336,9 +313,9 @@ local function diagnostics_widget()
   return string.format(
     "%s %s %s %s",
     ICON.error,
-    tools.hl_str("StatuslineError", err),
+    tools.hl_str("DiagnosticError", err),
     ICON.warn,
-    tools.hl_str("StatuslineWarn", warn)
+    tools.hl_str("DiagnosticWarn", warn)
   )
 end
 
@@ -375,13 +352,13 @@ local function venv_widget()
   end
   local env = vim.env.VIRTUAL_ENV
   if env and env ~= "" then
-    return tools.hl_str("StatuslineComment", string.format("[.venv: %s]", fn.fnamemodify(env, ":t")))
+    return tools.hl_str("Comment", string.format("[.venv: %s]", fn.fnamemodify(env, ":t")))
   end
   env = vim.env.CONDA_DEFAULT_ENV
   if env and env ~= "" then
-    return tools.hl_str("StatuslineComment", string.format("[conda: %s]", env))
+    return tools.hl_str("Comment", string.format("[conda: %s]", env))
   end
-  return ""
+  return tools.hl_str("Comment", "[no venv]")
 end
 
 local function go_test_widget()
@@ -411,7 +388,7 @@ local function scrollbar_widget()
   local total = api.nvim_buf_line_count(0)
   local idx = math.floor((cur - 1) / math.max(total, 1) * #SBAR) + 1
   idx = math.min(math.max(idx, 1), #SBAR)
-  return tools.hl_str("StatuslineScrollbar", SBAR[idx]:rep(2))
+  return tools.hl_str("Substitute", SBAR[idx]:rep(2))
 end
 
 -- ───────────────────────────────────────────────────────────
@@ -423,6 +400,11 @@ function M.render()
   end
 
   local fname = api.nvim_buf_get_name(0)
+
+  -- Hide statusline on empty unnamed buffers (landing page)
+  if fname == "" and bo.buftype == "" and api.nvim_buf_line_count(0) <= 1 then
+    return ""
+  end
   local root = (bo.buftype == "" and tools.get_path_root(fname)) or nil
   if bo.buftype ~= "" and bo.buftype ~= "help" then
     fname = bo.ft
@@ -431,6 +413,7 @@ function M.render()
   local buf = api.nvim_win_get_buf(vim.g.statusline_winid)
 
   local parts = {
+    pad = PAD,
     mode = mode_widget(),
     path = path_widget(root, fname),
     venv = venv_widget(),
@@ -473,11 +456,11 @@ api.nvim_create_autocmd("DirChanged", {
   end,
 })
 
--- Refresh highlights when colorscheme changes
+-- Refresh mode pill highlights when colorscheme changes
 api.nvim_create_autocmd("ColorScheme", {
   group = aug,
   callback = function()
-    setup_statusline_highlights()
+    setup_mode_highlights()
     vim.cmd("redrawstatus")
   end,
 })

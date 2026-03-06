@@ -55,7 +55,7 @@ return {
       },
       completion = {
         documentation = { auto_show = true },
-        trigger = { prefetch_on_insert = false },
+        trigger = { prefetch_on_insert = true },
         menu = {
           auto_show = true,
           draw = {
@@ -107,10 +107,10 @@ return {
     },
     opts = {
       provider = "openai_fim_compatible",
-      n_completions = 1,
-      context_window = 8192, -- Your 48GB RAM can handle this
-      throttle = 500,
-      debounce = 250,
+      n_completions = 3,
+      context_window = 16384,
+      throttle = 200,
+      debounce = 100,
       request_timeout = 8,
       notify = "error",
       provider_options = {
@@ -118,14 +118,13 @@ return {
           api_key = "TERM", -- Placeholder for Ollama (any env var works)
           name = "Ollama",
           end_point = "http://localhost:11434/v1/completions",
-          -- model = "qwen2.5-coder:14b",
-          model = "qwen2.5-coder:7b",
+          model = "qwen2.5-coder:14b",
           optional = {
-            max_tokens = 256,
-            top_p = 0.95,
-            temperature = 0.2,
+            max_tokens = 512,
+            top_p = 0.9,
+            temperature = 0.15,
             stop = { "\n\n", "\n```", "```" },
-            num_predict = 256,
+            num_predict = 512,
           },
         },
       },

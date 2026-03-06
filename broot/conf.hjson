@@ -53,8 +53,8 @@
 #
 # You may start either in 'command' mode, or in 'input' mode
 #
-# modal: true
-# initial_mode: command
+modal: true
+initial_mode: command
 
 ###############################################################
 # Whether to mark the selected line with a triangle
