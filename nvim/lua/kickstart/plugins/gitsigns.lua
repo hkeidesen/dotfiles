@@ -90,6 +90,7 @@ return {
         map("n", "<leader>hu", gitsigns.undo_stage_hunk, { desc = "Undo stage hunk" })
         map("n", "<leader>hR", gitsigns.reset_buffer, { desc = "Reset buffer" })
         map("n", "<leader>hp", gitsigns.preview_hunk, { desc = "Preview hunk" })
+        map("n", "<leader>hi", gitsigns.preview_hunk_inline, { desc = "Preview hunk inline" })
 
         -- Blame
         map("n", "<leader>hb", function()

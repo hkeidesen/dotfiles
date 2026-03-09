@@ -65,8 +65,11 @@ return {
       config.defaults.keymap.builtin["<c-f>"] = "preview-page-down"
       config.defaults.keymap.builtin["<c-b>"] = "preview-page-up"
 
-      -- Quickfix action - this makes ctrl-q actually send to quickfix
-      config.defaults.actions.files["ctrl-q"] = actions.file_sel_to_qf
+      -- Quickfix action - send to quickfix then open Trouble's qflist view
+      config.defaults.actions.files["ctrl-q"] = function(selected, opts)
+        actions.file_sel_to_qf(selected, opts)
+        vim.cmd("Trouble qflist open")
+      end
 
       return {
         fzf_colors = true,

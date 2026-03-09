@@ -45,6 +45,24 @@ if [ "$SHELL" != "$(which zsh)" ]; then
   chsh -s "$(which zsh)"
 fi
 
+# ── Services & Login Items ─────────────────────────────────────────────
+echo "Starting services..."
+
+# yabai / skhd via LaunchAgents (idempotent)
+if ! launchctl list 2>/dev/null | grep -q "com.koekeishiya.yabai"; then
+  yabai --start-service
+fi
+if ! launchctl list 2>/dev/null | grep -q "com.koekeishiya.skhd"; then
+  skhd --start-service
+fi
+
+# Raycast as login item (idempotent)
+if [ -d "/Applications/Raycast.app" ]; then
+  if ! osascript -e 'tell application "System Events" to get the name of every login item' 2>/dev/null | grep -q "Raycast"; then
+    osascript -e 'tell application "System Events" to make login item at end with properties {path:"/Applications/Raycast.app", hidden:false}'
+  fi
+fi
+
 # ── Summary ───────────────────────────────────────────────────────────
 echo ""
 echo "Setup complete!"
@@ -53,3 +71,4 @@ echo "  Oh My Tmux:        ~/.tmux"
 echo "  Symlinks:          created by link.sh"
 echo "  Neovim plugins:    synced via Lazy"
 echo "  Default shell:     zsh"
+echo "  Services:          yabai, skhd, Raycast"

@@ -25,7 +25,7 @@ link restart-wm.sh restart-wm.sh
 link tmux.conf.local tmux.conf.local
 link zprofile zprofile
 link gitignore_global gitignore
-link espanso.yml config/espanso/espanso.yml
+link espanso.yml config/espanso/match/base.yml
 
 # Non-dotfiles (no leading dot)
 ln -sf "$PWD/Brewfile" "$HOME/Brewfile"
