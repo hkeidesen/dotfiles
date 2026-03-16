@@ -138,8 +138,17 @@ return {
               unusedparams = true,
               unusedvariable = true,
             },
-            staticcheck = true,
+            staticcheck = false,
             gofumpt = true,
+            hints = {
+              assignVariableTypes = false,
+              compositeLiteralFields = false,
+              compositeLiteralTypes = false,
+              constantValues = false,
+              functionTypeParameters = false,
+              parameterNames = false,
+              rangeVariableTypes = false,
+            },
           },
         },
       })

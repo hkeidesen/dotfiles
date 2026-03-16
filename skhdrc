@@ -1,66 +1,40 @@
+# Change window focus
 
-# Navigation
-alt - h : yabai -m window --focus west
-alt - j : yabai -m window --focus south
-alt - k : yabai -m window --focus north
-alt - l : yabai -m window --focus east
+lalt - j : yabai -m window --focus south
+lalt - k : yabai -m window --focus north
+lalt - h : yabai -m window --focus west
+lalt - l : yabai -m window --focus east
 
-# Move windows (warp = restructure tree, swap = just swap positions)
-shift + alt - h : yabai -m window --swap west
-shift + alt - j : yabai -m window --swap south
-shift + alt - k : yabai -m window --swap north
-shift + alt - l : yabai -m window --swap east
+# Change focus between external displays (left and right)
+lalt - s : yabai -m display --focus west
+lalt - g : yabai -m display --focus east
 
-ctrl + alt - h : yabai -m window --warp west
-ctrl + alt - j : yabai -m window --warp south
-ctrl + alt - k : yabai -m window --warp north
-ctrl + alt - l : yabai -m window --warp east
+# Reset layout — WezTerm full height on left
+shift + lalt - 0x1D : ~/dotfiles/scripts/yabai-center-wezterm.sh
 
-# Layout
-shift + alt - r : yabai -m space --rotate 270
-shift + alt - y : yabai -m space --mirror y-axis
-shift + alt - x : yabai -m space --mirror x-axis
-shift + alt - e : yabai -m space --balance
-shift + alt - d : yabai -m window --toggle split
-shift + alt - t : yabai -m window --toggle float --grid 4:4:1:1:2:2
-shift + alt - m : yabai -m window --toggle zoom-fullscreen
+#modify layout
+shift + lalt - t : yabai -m window --toggle float --grid 4:4:1:1:2:2
 
-# Reset layout — WezTerm biggest on left
-shift + alt - 0 : ~/dotfiles/scripts/yabai-center-wezterm.sh
+shift + lalt - m : yabai -m window --toggle zoom-fullscreen
+shift + lalt - e : yabai -m space --balance
 
-# Resize
-shift + alt - left  : yabai -m window --resize left:-40:0
-shift + alt - right : yabai -m window --resize right:40:0
-shift + alt - up    : yabai -m window --resize top:0:-40
-shift + alt - down  : yabai -m window --resize bottom:0:40
+shift + lalt - j : yabai -m window --swap south
+shift + lalt - k : yabai -m window --swap north
+shift + lalt - h : yabai -m window --swap west
+shift + lalt - l : yabai -m window --swap east
 
-# Displays
-alt - s : yabai -m display --focus west
-alt - g : yabai -m display --focus east
-shift + alt - s : yabai -m window --display west; yabai -m display --focus west
-shift + alt - g : yabai -m window --display east; yabai -m display --focus east
+ctrl + lalt - j : yabai -m window --warp south
+ctrl + lalt - k : yabai -m window --warp north
+ctrl + lalt - h : yabai -m window --warp west
+ctrl + lalt - l : yabai -m window --warp east
 
-# Spaces
-shift + alt - 1 : yabai -m window --space 1
-shift + alt - 2 : yabai -m window --space 2
-shift + alt - 3 : yabai -m window --space 3
-shift + alt - 4 : yabai -m window --space 4
-shift + alt - 5 : yabai -m window --space 5
+shift + lalt - s : yabai -m window --display west; yabai -m display --focus west;
+shift + lalt - g : yabai -m window --display east; yabai -m display --focus east;
 
-# App launchers
-alt - return : yabai -m window --focus $(yabai -m query --windows | jq '[.[] | select(.app=="WezTerm")][0].id') 2>/dev/null || open -na WezTerm
-alt - b : open -na "Arc"
-alt - p : open -na "1Password"
-alt - n : open -na "Notion"
+lalt - return : open -na WezTerm
+lalt - b : open -na "Arc"
+lalt - p : open -na "1Password"
+lalt - n : open -na "Notion"
 
-# Tab / recent
-alt - tab : yabai -m window --focus recent
-shift + alt - tab : yabai -m window --focus prev
-
-# Norwegian ISO keycodes:
-#   0x2B = , / ;    0x2F = . / :    0x0A = < / > (ISO key)
-#   0x29 = ø / Ø    0x27 = æ / Æ    0x21 = å / Å
-
-# Stack navigation (, / . keys)
-alt - 0x2B : yabai -m window --focus stack.prev || yabai -m window --focus stack.last
-alt - 0x2F : yabai -m window --focus stack.next || yabai -m window --focus stack.first
+lalt - tab : yabai -m window --focus recent
+shift + lalt - tab : yabai -m window --focus prev

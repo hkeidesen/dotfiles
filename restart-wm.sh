@@ -11,4 +11,5 @@ sleep 1
 skhd --start-service
 
 echo "✅ Window manager restarted."
+sleep 1 && ~/dotfiles/scripts/yabai-center-wezterm.sh
 

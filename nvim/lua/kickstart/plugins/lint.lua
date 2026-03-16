@@ -69,7 +69,7 @@ return {
       })
 
       -- Heavyweight linters that should only run on save.
-      local save_only = { golangcilint = true }
+      local save_only = { golangcilint = true, revive = true }
 
       -- Debounce timer to prevent stacking golangci-lint on rapid saves.
       local debounce_timer = nil

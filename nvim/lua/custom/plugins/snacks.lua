@@ -27,7 +27,7 @@ return {
       },
     },
     input = { enabled = true },
-    terminal = { enabled = true, win = { style = "terminal", position = "float" } },
+    terminal = { enabled = true, win = { style = "terminal", position = "float", bo = { bufhidden = "hide" } } },
     words = { enabled = true },
     zen = { enabled = true },
     scratch = { enabled = true },

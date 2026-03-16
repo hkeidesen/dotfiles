@@ -1,0 +1,13 @@
+{
+  "name": "dotfiles",
+  "owner": {
+    "name": "hans-kristian"
+  },
+  "plugins": [
+    {
+      "name": "dotfiles",
+      "source": "./plugins/dotfiles",
+      "description": "Personal Claude Code skills and tools"
+    }
+  ]
+}

@@ -12,9 +12,9 @@ config.font = wezterm.font_with_fallback({
 config.color_scheme = "Ayu Mirage"
 -- config.color_scheme = "rose-pine"
 -- config.color_scheme = 'Horizon Dark (base16)'
-config.font_size = 15.0
-config.cell_width = 1.35
-config.line_height = 1.50
+config.font_size = 13.0
+config.cell_width = 1.5
+config.line_height = 1.75
 config.window_background_opacity = 0.85
 config.macos_window_background_blur = 20
 
@@ -31,8 +31,8 @@ config.adjust_window_size_when_changing_font_size = false
 config.hide_mouse_cursor_when_typing = true
 config.scrollback_lines = 10000
 
-config.send_composed_key_when_left_alt_is_pressed = true   -- typing: { } [ ] | etc.
-config.send_composed_key_when_right_alt_is_pressed = false  -- sends Meta for tmux (M-a, M-b…)
+config.send_composed_key_when_left_alt_is_pressed = true -- typing: { } [ ] | etc.
+config.send_composed_key_when_right_alt_is_pressed = false -- sends Meta for tmux (M-a, M-b…)
 
 -- Right-opt+hjkl (remapped to F13-F16 by Karabiner) → Meta-hjkl for tmux pane nav
 local act = wezterm.action

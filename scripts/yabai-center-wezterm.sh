@@ -8,6 +8,6 @@ WT_ID=$(yabai -m query --windows --space | \
 
 [ -z "$WT_ID" ] && exit 0
 
-yabai -m window "$WT_ID" --swap first 2>/dev/null
+yabai -m window "$WT_ID" --warp first 2>/dev/null
 yabai -m window "$WT_ID" --ratio abs:0.5
 yabai -m window --focus "$WT_ID"

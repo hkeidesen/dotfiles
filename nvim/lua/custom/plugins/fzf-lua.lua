@@ -68,6 +68,7 @@ return {
       -- Quickfix action - send to quickfix then open Trouble's qflist view
       config.defaults.actions.files["ctrl-q"] = function(selected, opts)
         actions.file_sel_to_qf(selected, opts)
+        vim.cmd("cclose")
         vim.cmd("Trouble qflist open")
       end
 
