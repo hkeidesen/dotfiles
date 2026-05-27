@@ -90,6 +90,10 @@ local function run_relevant_go_test()
   local spinner_index = 1
   local build_failed = false
   local compilation_errors = {}
+  local failed_test_names = {}
+  local failing_package = nil
+  local current_failing_test = nil
+  local failure_output = {} -- map of test name -> {lines}
   local start_time = os.time()
 
   local function update_spinner()
@@ -134,29 +138,42 @@ local function run_relevant_go_test()
     end
 
     for line in data:gmatch("[^\r\n]+") do
-      -- Check for compilation errors
+      -- Check for compilation errors (file:line:col: message)
       if line:match("%.go:%d+:%d+:") then
         build_failed = true
         table.insert(compilation_errors, line)
       end
 
-      -- Check for build failed indicator
-      if line:match("%[build failed%]") then
+      -- Check for build failed indicator + capture which package
+      local bf_pkg = line:match("^FAIL%s+(%S+)%s+%[build failed%]")
+      if bf_pkg then
+        build_failed = true
+        failing_package = bf_pkg
+      elseif line:match("%[build failed%]") then
         build_failed = true
       end
 
       -- Go test output patterns (only count if no build failure)
       if not build_failed then
-        -- "=== RUN   TestFunctionName"
+        local fail_name = line:match("^%s*%-%-%- FAIL:%s+(%S+)")
         if line:match("^=== RUN") then
           total_tests = total_tests + 1
           running_tests = running_tests + 1
-        -- "--- FAIL: TestFunctionName"
-        elseif line:match("^--- FAIL") then
+          current_failing_test = nil
+        elseif fail_name then
           failed_tests = failed_tests + 1
-        -- "--- PASS: TestFunctionName"
-        elseif line:match("^--- PASS") then
+          table.insert(failed_test_names, fail_name)
+          current_failing_test = fail_name
+          failure_output[fail_name] = failure_output[fail_name] or {}
+        elseif line:match("^%s*%-%-%- PASS") then
           running_tests = running_tests - 1
+          current_failing_test = nil
+        elseif current_failing_test then
+          -- Indented lines after --- FAIL belong to the failing test
+          local body = line:match("^%s+(.+)$")
+          if body and #failure_output[current_failing_test] < 5 then
+            table.insert(failure_output[current_failing_test], body)
+          end
         end
       end
       -- No redrawstatus here — the spinner (100ms interval) picks up counter changes
@@ -170,7 +187,6 @@ local function run_relevant_go_test()
     stdio = { nil, stdout, stderr },
   }, function(code)
     is_running_ref = false
-    current_is_running = false
     if not stdout:is_closing() then
       stdout:close()
     end
@@ -180,27 +196,61 @@ local function run_relevant_go_test()
     if not handle:is_closing() then
       handle:close()
     end
-    -- Clear module refs if this is still the active run
-    if current_handle == handle then
+
+    -- If this run was cancelled mid-flight, the module refs already point at a
+    -- newer run (or nil). Bail without notifying so we don't double-fire.
+    local was_active = (current_handle == handle)
+    if was_active then
       current_handle = nil
       current_stdout = nil
       current_stderr = nil
+      current_is_running = false
+    end
+
+    if not was_active then
+      return
     end
 
     vim.schedule(function()
       if build_failed then
-        if #compilation_errors > 0 then
-          vim.g.go_test_status = string.format("🏗️ Build failed: %d error(s)", #compilation_errors)
-          -- Print first few errors for visibility
-          for i = 1, math.min(3, #compilation_errors) do
-            print("  " .. compilation_errors[i])
-          end
-        else
-          vim.g.go_test_status = "🏗️ Build failed"
+        local err_count = #compilation_errors
+        vim.g.go_test_status = string.format("🏗️ Build failed: %d error(s)", err_count)
+
+        local lines = {}
+        if failing_package then
+          table.insert(lines, "📦 " .. failing_package)
         end
+        local show = math.min(4, err_count)
+        for i = 1, show do
+          table.insert(lines, "• " .. compilation_errors[i])
+        end
+        if err_count > show then
+          table.insert(lines, string.format("…and %d more", err_count - show))
+        end
+        if #lines == 0 then
+          table.insert(lines, "Build failed (no diagnostic lines captured)")
+        end
+
+        Snacks.notify(table.concat(lines, "\n"), { level = "error", title = "Go build failed" })
       elseif total_tests > 0 then
         if failed_tests > 0 then
           vim.g.go_test_status = string.format("🔥 %d/%d failed", failed_tests, total_tests)
+
+          local lines = {}
+          local show_tests = math.min(3, #failed_test_names)
+          for i = 1, show_tests do
+            local name = failed_test_names[i]
+            table.insert(lines, "✗ " .. name)
+            local out = failure_output[name] or {}
+            for j = 1, math.min(2, #out) do
+              table.insert(lines, "    " .. out[j])
+            end
+          end
+          if #failed_test_names > show_tests then
+            table.insert(lines, string.format("…and %d more", #failed_test_names - show_tests))
+          end
+
+          Snacks.notify(table.concat(lines, "\n"), { level = "warn", title = "Go tests failed" })
         else
           vim.g.go_test_status = string.format("✅ %d/%d passed", total_tests, total_tests)
         end
@@ -222,8 +272,15 @@ local function run_relevant_go_test()
   end)
 end
 
+-- Augroup with clear=true so re-sourcing this file (lazy.nvim reload, :luafile,
+-- accidental double-load) does not stack duplicate BufWritePost listeners —
+-- previously, every extra registration triggered a parallel `go test` run and a
+-- duplicate Snacks notification on save.
+local augroup = vim.api.nvim_create_augroup("FindAndRunGoTests", { clear = true })
+
 -- Auto-run relevant tests on save (debounced)
 vim.api.nvim_create_autocmd("BufWritePost", {
+  group = augroup,
   pattern = "*.go",
   callback = function()
     if debounce_timer then
@@ -242,6 +299,7 @@ vim.api.nvim_create_autocmd("BufWritePost", {
 
 -- Clear test status when buffer changes
 vim.api.nvim_create_autocmd("BufWinEnter", {
+  group = augroup,
   pattern = "*.go",
   callback = function()
     pcall(function()
