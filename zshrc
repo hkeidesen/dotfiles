@@ -26,6 +26,14 @@ export GPG_TTY="$(tty)"
 # Docker (Colima)
 export CTOP_DOCKER_SOCKET="unix://$HOME/.colima/default/docker.sock"
 
+# XDG_RUNTIME_DIR: macOS doesn't set this, so nvim falls back to a long path
+# under $TMPDIR (nvim.<username>/<random>/...). Combined with this user's long
+# username, that overflows macOS's 104-byte sockaddr_un limit and breaks
+# things that create Unix sockets there, e.g. fzf-lua's RPC server
+# ("serverstart(): invalid argument"). Point it at a short path instead.
+export XDG_RUNTIME_DIR="/tmp/xdg-runtime-$UID"
+mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
+
 # ------------------------------------------------------------------------------
 # 2) Anthropic API key (lazy — only loaded when needed)
 # ------------------------------------------------------------------------------
@@ -39,6 +47,14 @@ motion_api_key() {
     export MOTION_API_KEY="$(security find-generic-password -a "$USER" -s "motion_api_key" -w 2>/dev/null)"
   fi
 }
+# Google Ads MCP: developer token from keychain (secret), project id in the clear.
+google_ads_dev_token() {
+  if [[ -z "$GOOGLE_ADS_DEVELOPER_TOKEN" ]]; then
+    export GOOGLE_ADS_DEVELOPER_TOKEN="$(security find-generic-password -a "$USER" -s "google_ads_dev_token" -w 2>/dev/null)"
+  fi
+}
+google_ads_dev_token
+export GOOGLE_PROJECT_ID="stemne"
 # Hook: load the key before any command that might need it
 _maybe_load_api_key() {
   case "$1" in
@@ -99,6 +115,11 @@ node() { __init_nvm; node "$@"; }
 npm()  { __init_nvm; npm "$@"; }
 npx()  { __init_nvm; npx "$@"; }
 pnpm() { __init_nvm; pnpm "$@"; }
+
+# pnpm global bin dir (pnpm installed via Homebrew, not the standalone
+# installer, so `pnpm setup` doesn't work — set this manually instead)
+export PNPM_HOME="$HOME/Library/pnpm"
+export PATH="$PNPM_HOME/bin:$PATH"
 
 # ------------------------------------------------------------------------------
 # 6) fzf, zoxide, broot
@@ -240,3 +261,4 @@ _auto_track_dotfiles() {
 # zprof
 
 source /Users/hans-kristian.norum/.config/broot/launcher/bash/br
+

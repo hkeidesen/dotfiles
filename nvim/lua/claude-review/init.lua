@@ -54,6 +54,7 @@ local severity_map = {
 
 local ns_review = vim.api.nvim_create_namespace("claude_review")
 local ns_diag = vim.api.nvim_create_namespace("claude_diagnostics")
+local ns_hunk = vim.api.nvim_create_namespace("claude_hunk_diagnostics")
 local ns_track = vim.api.nvim_create_namespace("claude_diagnostic_track")
 
 
@@ -165,6 +166,174 @@ local function parse_response(response, bufnr, source)
   end
   return diagnostics
 end
+
+-- -------------------------------------------------------------------------
+-- Treesitter helpers for hunk diagnostics
+-- -------------------------------------------------------------------------
+
+local FUNC_NODES = {
+  go         = { "function_declaration", "method_declaration", "func_literal" },
+  typescript = { "function_declaration", "arrow_function", "function_expression", "method_definition" },
+  typescriptreact = { "function_declaration", "arrow_function", "function_expression", "method_definition" },
+  javascript = { "function_declaration", "arrow_function", "function_expression", "method_definition" },
+  javascriptreact = { "function_declaration", "arrow_function", "function_expression", "method_definition" },
+  vue        = { "function_declaration", "arrow_function", "function_expression", "method_definition" },
+  python     = { "function_definition" },
+}
+
+local function has_errors(node)
+  if node:type() == "ERROR" then return true end
+  for child in node:iter_children() do
+    if has_errors(child) then return true end
+  end
+  return false
+end
+
+-- Returns the innermost enclosing function node at (lnum, col), 0-indexed.
+local function get_enclosing_function(bufnr, lnum, col)
+  local ft = vim.bo[bufnr].filetype
+  local types = FUNC_NODES[ft]
+  if not types then return nil end
+
+  local ok, parser = pcall(vim.treesitter.get_parser, bufnr)
+  if not ok then return nil end
+
+  local tree = parser:parse()[1]
+  if not tree then return nil end
+
+  local node = tree:root():named_descendant_for_range(lnum, col, lnum, col)
+  while node do
+    local t = node:type()
+    for _, ft_type in ipairs(types) do
+      if t == ft_type then return node end
+    end
+    node = node:parent()
+  end
+  return nil
+end
+
+-- Returns the gitsigns hunk that covers lnum (1-indexed), or nil.
+local function get_hunk_at_line(bufnr, lnum_1)
+  local ok, gs = pcall(require, "gitsigns")
+  if not ok then return nil end
+  local hunks = gs.get_hunks(bufnr)
+  if not hunks then return nil end
+  for _, hunk in ipairs(hunks) do
+    local s = hunk.added.start
+    local e = s + math.max(hunk.added.count, 1) - 1
+    if lnum_1 >= s and lnum_1 <= e then
+      return hunk
+    end
+  end
+  return nil
+end
+
+-- Sends the lines of func_node to Claude, with each line prefixed by its
+-- absolute 1-indexed file line number so Claude never has to do arithmetic.
+local function send_function_to_claude(bufnr, func_node, ns)
+  local start_row, _, end_row, _ = func_node:range() -- 0-indexed
+  local lines = vim.api.nvim_buf_get_lines(bufnr, start_row, end_row + 1, false)
+  local ft = vim.bo[bufnr].filetype
+
+  -- Prefix every line with its absolute file line number
+  local numbered = {}
+  for i, line in ipairs(lines) do
+    table.insert(numbered, string.format("%d: %s", start_row + i, line))
+  end
+  local content = table.concat(numbered, "\n")
+
+  local instructions = get_instructions()
+  local prompt = string.format([[
+Analyze this %s function for issues. Each line is prefixed with its line number in the original file.
+For each issue, respond with ONLY lines in this exact format:
+LINE_NUMBER:SEVERITY:message
+
+Where SEVERITY is one of: BUG, CONCERN, SUGGESTION, TIL
+LINE_NUMBER is the number shown at the start of the relevant line.
+
+%s
+
+If the code looks good, respond with just: LGTM
+Do not include any other text, explanation, or formatting.
+]], ft, instructions)
+
+  local job_id = vim.fn.jobstart(build_cmd(prompt), {
+    stdout_buffered = true,
+    on_stdout = function(_, data)
+      local filtered = vim.tbl_filter(function(s) return s ~= "" end, data or {})
+      local response = table.concat(filtered, "\n")
+      vim.schedule(function()
+        if response == "" then return end
+        if response:match("^%s*LGTM%s*$") then
+          vim.notify("Claude hunk: LGTM", vim.log.levels.INFO)
+          return
+        end
+        local diagnostics = parse_response(response, bufnr, "claude-hunk")
+        set_tracked_diagnostics(ns, bufnr, diagnostics)
+        vim.notify(string.format("Claude hunk: %d findings", #diagnostics), vim.log.levels.INFO)
+      end)
+    end,
+    on_stderr = function(_, data)
+      local filtered = vim.tbl_filter(function(s) return s ~= "" end, data or {})
+      local err = table.concat(filtered, "\n")
+      if err ~= "" then
+        vim.schedule(function()
+          vim.notify("Claude hunk error: " .. err, vim.log.levels.ERROR)
+        end)
+      end
+    end,
+  })
+
+  if job_id <= 0 then
+    vim.notify("Failed to start claude process", vim.log.levels.ERROR)
+    return
+  end
+
+  vim.fn.chansend(job_id, content)
+  vim.fn.chanclose(job_id, "stdin")
+end
+
+-- Diagnose the function enclosing the hunk at the cursor.
+function M.diagnose_hunk()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local lnum = vim.fn.line(".") -- 1-indexed
+
+  if not get_hunk_at_line(bufnr, lnum) then return end
+
+  local func_node = get_enclosing_function(bufnr, lnum - 1, 0)
+  if not func_node then return end
+  if has_errors(func_node) then return end
+
+  send_function_to_claude(bufnr, func_node, ns_hunk)
+end
+
+-- Diagnose all changed functions in the buffer (for BufWritePost).
+-- Deduplicates so the same function isn't sent twice if multiple hunks touch it.
+function M.diagnose_all_hunks()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local ok, gs = pcall(require, "gitsigns")
+  if not ok then return end
+  local hunks = gs.get_hunks(bufnr)
+  if not hunks or #hunks == 0 then return end
+
+  local seen = {}
+  for _, hunk in ipairs(hunks) do
+    local lnum = hunk.added.start -- 1-indexed
+    local func_node = get_enclosing_function(bufnr, lnum - 1, 0)
+    if func_node and not has_errors(func_node) then
+      local sr, _, er, _ = func_node:range()
+      local key = sr .. ":" .. er
+      if not seen[key] then
+        seen[key] = true
+        send_function_to_claude(bufnr, func_node, ns_hunk)
+      end
+    end
+  end
+end
+
+-- -------------------------------------------------------------------------
+-- Full-buffer review / diagnose (unchanged)
+-- -------------------------------------------------------------------------
 
 function M.review_buffer()
   local bufnr = vim.api.nvim_get_current_buf()
@@ -331,7 +500,10 @@ Do not include any other text, explanation, or formatting.
   vim.fn.chanclose(job_id, "stdin")
 end
 
--- Auto-mode state
+-- -------------------------------------------------------------------------
+-- Auto mode
+-- -------------------------------------------------------------------------
+
 M.auto_enabled = false
 local last_run = {} -- bufnr -> timestamp
 local augroup = vim.api.nvim_create_augroup("claude_auto_diagnostics", { clear = true })
@@ -353,15 +525,17 @@ function M.toggle_auto()
   if M.auto_enabled then
     vim.api.nvim_create_autocmd("BufWritePost", {
       group = augroup,
-      callback = debounced_diagnose,
+      callback = function()
+        debounced_diagnose()
+        M.diagnose_all_hunks()
+      end,
     })
     vim.api.nvim_create_autocmd("CursorHold", {
       group = augroup,
       callback = function()
-        if vim.bo.buftype ~= "" then
-          return
-        end
+        if vim.bo.buftype ~= "" then return end
         debounced_diagnose()
+        M.diagnose_hunk()
       end,
     })
   end
@@ -373,6 +547,7 @@ function M.clear()
   local bufnr = vim.api.nvim_get_current_buf()
   set_tracked_diagnostics(ns_review, bufnr, {})
   set_tracked_diagnostics(ns_diag, bufnr, {})
+  set_tracked_diagnostics(ns_hunk, bufnr, {})
   vim.notify("Claude diagnostics cleared", vim.log.levels.INFO)
 end
 

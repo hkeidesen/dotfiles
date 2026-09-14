@@ -19,7 +19,7 @@ return {
       end
 
       local utils = require("Comment.utils")
-      
+
       -- Get the location where we're commenting
       local location = nil
       if ctx.ctype == utils.ctype.blockwise then
@@ -29,7 +29,6 @@ return {
       end
 
       -- Check if we're inside JSX using treesitter
-      local ts_utils = require("nvim-treesitter.ts_utils")
       local parser = vim.treesitter.get_parser(0)
       
       if not parser then

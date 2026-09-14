@@ -158,8 +158,13 @@ tmux_conf_theme_clock_colour="$tmux_conf_theme_colour_4"
 tmux_conf_theme_clock_style="24"
 
 # Clipboard
-tmux_conf_copy_to_os_clipboard=true
-tmux_conf_theme_mode_bg="$tmux_conf_theme_colour_5"   # currently yellow
+# Off: prevents oh-my-tmux from binding MouseDragEnd1Pane → pbcopy, which on
+# trackpads turns a stray click-drag into pbcopy "" and wipes the clipboard.
+# Explicit `y` in copy-mode-vi still copies to the OS clipboard via tmux-yank.
+tmux_conf_copy_to_os_clipboard=false
+# Copy-mode selection bg — decoupled from colour_5 so the message bar can
+# stay full yellow while selection uses a dimmer amber that's easier on eyes.
+tmux_conf_theme_mode_bg="#806b00"
 tmux_conf_theme_message_bg="$tmux_conf_theme_colour_5"
 
 # URL scan
@@ -182,12 +187,26 @@ set -g @plugin 'tmux-plugins/tmux-copycat'    # improved searching
 set -g @plugin 'tmux-plugins/tmux-cpu'        # CPU meter
 set -g @plugin 'tmux-plugins/tmux-resurrect'  # save/restore sessions
 set -g @plugin 'tmux-plugins/tmux-continuum'  # autosave
-set -g @plugin 'omerxx/tmux-sessionx'         # session manager
 set -g @plugin 'niksingh710/minimal-tmux-status'  # minimal status line
+
+bind o if-shell '[ "#{window_zoomed_flag}" = "1" ]' 'last-pane; resize-pane -Z' 'last-pane'
+
+# Prettier choose-tree (prefix W): icons + colors via -F format. The tree
+# glyphs (-, |->, +) come from tmux's mode-tree internals and can't be
+# styled; -F controls only what appears after them on each row.
+#   sessions:    name  N windows  attached
+#   windows:    N  name  ● (active in session)  zoomed/bell tags
+unbind W
+bind W choose-tree -Zw -F '#{?pane_format,#[fg=#8a8a8a]  #[default]#{pane_current_command} #[fg=#8a8a8a]"#{pane_title}",#{?window_format,#[fg=#8a8a8a]  #[fg=#00afff,bold]#{window_index}#[nobold]  #[default]#{window_name}#{?window_active, #[fg=#5fff00]●,}#{?window_zoomed_flag, #[fg=#8a8a8a] zoomed,}#{?window_bell_flag, #[fg=#ffff00] bell,},#[fg=#5fff00,bold]  #{session_name}#[nobold,fg=#8a8a8a]  #{session_windows} windows#{?session_attached, #[fg=#00afff]  attached,}}'
 
 # -- plugin configuration --------------------------------------------------
 set -g @continuum-restore 'on'
 
-# -- sessionx configuration ------------------------------------------------
-set -g @sessionx-bind 'o'
-set -g @sessionx-prefix 'on'
+# tmux-yank: don't auto-copy on mouse drag end. Require explicit `y` in
+# copy-mode-vi to copy. Without this, tmux-yank rebinds MouseDragEnd1Pane
+# and the unbind below has no effect.
+set -g @yank_with_mouse 'off'
+
+# Defensive: even with the setting above and copy_to_os_clipboard=false, make
+# sure nothing in copy-mode-vi auto-copies on drag end.
+unbind -T copy-mode-vi MouseDragEnd1Pane

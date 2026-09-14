@@ -1,15 +1,14 @@
-#!/bin/bash
-
-echo "Restarting yabai..."
+#!/usr/bin/env sh
 yabai --stop-service
-sleep 1
-yabai --start-service
-
-echo "Restarting skhd..."
 skhd --stop-service
-sleep 1
+yabai --start-service
 skhd --start-service
 
-echo "✅ Window manager restarted."
-sleep 1 && ~/dotfiles/scripts/yabai-center-wezterm.sh
-
+# skhd hard-aborts on launch while macOS Secure Keyboard Entry is on, which
+# silently kills every hotkey. Warn (naming the holder) instead of failing quietly.
+holder=$(ioreg -l -w 0 | grep -o '"kCGSSessionSecureInputPID"=[0-9]*' | head -1 | cut -d= -f2)
+if [ -n "$holder" ] && [ "$holder" != "0" ]; then
+  app=$(ps -p "$holder" -o comm= 2>/dev/null | sed 's#.*/##')
+  echo "⚠️  Secure Keyboard Entry is on (held by ${app:-pid $holder}) — skhd will abort."
+  echo "    Quit that app (or lock/unlock: Ctrl+Cmd+Q), then run restart-wm again."
+fi

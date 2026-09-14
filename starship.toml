@@ -1,6 +1,10 @@
 # --- global ---
 add_newline = true
 command_timeout = 2000
+# Filesystem-scan budget — default 30ms blows up in large repos
+# (e.g. stemne/frontend with ~290k files), causing "Scanning current
+# directory timed out" warnings and broken prompt renders.
+scan_timeout = 1000
 right_format = ""                # robbyrussell is left-only
 
 # --- palette (optional, safe to keep) ---

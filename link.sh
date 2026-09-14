@@ -18,17 +18,18 @@ link() {
 link zshrc zshrc
 link wezterm.lua wezterm.lua
 link gitconfig gitconfig
-link skhdrc skhdrc
-link yabairc yabairc
 link starship.toml config/starship.toml  # symlink into ~/.config/starship.toml
-link restart-wm.sh restart-wm.sh
 link tmux.conf.local tmux.conf.local
 link zprofile zprofile
 link gitignore_global gitignore
 link espanso.yml config/espanso/match/base.yml
 
+link yabairc yabairc
+link skhdrc skhdrc
+
 # Non-dotfiles (no leading dot)
 ln -sf "$PWD/Brewfile" "$HOME/Brewfile"
+ln -sf "$PWD/restart-wm.sh" "$HOME/restart-wm.sh"
 
 # Folders
 ln -sfn "$PWD/nvim" "$HOME/.config/nvim"
@@ -39,5 +40,6 @@ ln -sfn "$PWD/lnav" "$HOME/.config/lnav"
 ln -sfn "$PWD/gh" "$HOME/.config/gh"
 ln -sfn "$PWD/raycast" "$HOME/.config/raycast"
 ln -sfn "$PWD/broot" "$HOME/.config/broot"
+ln -sfn "$PWD/config/atuin" "$HOME/.config/atuin"
 
 echo "✨ All symlinks created!"
