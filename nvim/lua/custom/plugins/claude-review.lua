@@ -12,6 +12,10 @@ return {
       require("claude-review").diagnose_buffer()
     end, { desc = "[C]laude: [D]iagnose full file" })
 
+    vim.keymap.set("n", "<leader>ch", function()
+      require("claude-review").diagnose_hunk()
+    end, { desc = "[C]laude: diagnose function at [h]unk" })
+
     vim.keymap.set("n", "<leader>cA", function()
       require("claude-review").toggle_auto()
     end, { desc = "[C]laude: toggle [A]uto diagnostics" })

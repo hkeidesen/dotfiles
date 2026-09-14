@@ -1,3 +1,20 @@
+-- For JS-family files, prefer biome when the project has a biome.json,
+-- otherwise prettier. NEVER chain biome → prettier as a fallback list:
+-- if biome fails at runtime (e.g. nested-root config error, version
+-- mismatch), conform would silently run prettier next, and prettier with
+-- no project config reformats with its own defaults (double quotes, semis,
+-- 80-col), producing diffs CI rejects.
+-- See: stemne CI failure on frontend/src/views/setup/DashboardView.vue.
+local function js_fmt(bufnr)
+  local fname = vim.api.nvim_buf_get_name(bufnr)
+  local found = vim.fs.find({ "biome.json", "biome.jsonc" }, {
+    path = fname,
+    upward = true,
+  })[1]
+  if found then return { "biome" } end
+  return { "prettier" }
+end
+
 local function eslint_fix(bufnr)
   local client = vim.lsp.get_clients({ name = "eslint", bufnr = bufnr })[1]
   if not client then return end
@@ -24,8 +41,11 @@ return {
       {
         "<leader>f",
         function()
-          eslint_fix(vim.api.nvim_get_current_buf())
-          require("conform").format({ async = true, lsp_fallback = true })
+          local bufnr = vim.api.nvim_get_current_buf()
+          eslint_fix(bufnr)
+          local filetype = vim.bo[bufnr].filetype
+          local lsp_format = (filetype == "vue" or filetype == "sql") and "never" or "fallback"
+          require("conform").format({ async = true, lsp_format = lsp_format })
         end,
         mode = { "n", "v" },
         desc = "Format buffer",
@@ -44,6 +64,12 @@ return {
             lsp_format = "last",
           }
         end
+        if vim.bo[bufnr].filetype == "vue" or vim.bo[bufnr].filetype == "sql" then
+          return {
+            timeout_ms = 3000,
+            lsp_format = "never",
+          }
+        end
         return {
           timeout_ms = 3000,
           lsp_format = "fallback",
@@ -51,16 +77,16 @@ return {
       end,
 
       formatters_by_ft = {
-        -- JS/TS: Try biome first (if biome.json exists), fall back to prettier
-        javascript = { "biome", "prettier" },
-        javascriptreact = { "biome", "prettier" },
-        typescript = { "biome", "prettier" },
-        typescriptreact = { "biome", "prettier" },
-        json = { "biome", "prettier" },
-        jsonc = { "biome", "prettier" },
+        javascript = js_fmt,
+        javascriptreact = js_fmt,
+        typescript = js_fmt,
+        typescriptreact = js_fmt,
+        json = js_fmt,
+        jsonc = js_fmt,
 
-        -- Vue/CSS/Markdown
-        vue = { "prettier" },
+        -- Vue: use the repository formatter only. Mixing vue_ls formatting with
+        -- biome makes templates oscillate between two different layouts.
+        vue = js_fmt,
         css = { "prettier" },
         scss = { "prettier" },
         markdown = { "prettier" },
@@ -72,6 +98,8 @@ return {
         go = { "goimports", "gofumpt", "golines" },
         yaml = { "prettier" },
         yml = { "prettier" },
+        cs = { "csharpier" },
+        sql = { "sql_formatter" },
       },
 
       formatters = {
@@ -98,6 +126,22 @@ return {
         -- Prettier - use project config
         prettier = {
           -- Let prettier find and use .prettierrc, prettier.config.js, etc.
+        },
+        -- Only run csharpier in repos that have opted in (mirrors the biome pattern).
+        -- Why: avoids reformatting team repos that haven't standardised on csharpier.
+        csharpier = {
+          condition = function(self, ctx)
+            return vim.fs.find(
+              { ".csharpierrc", ".csharpierrc.json", ".csharpierrc.yaml", ".csharpierrc.yml" },
+              { path = ctx.filename, upward = true }
+            )[1] ~= nil
+          end,
+        },
+        sql_formatter = {
+          prepend_args = {
+            "--config",
+            '{"language":"transactsql","tabWidth":4}',
+          },
         },
       },
     },

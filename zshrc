@@ -26,6 +26,14 @@ export GPG_TTY="$(tty)"
 # Docker (Colima)
 export CTOP_DOCKER_SOCKET="unix://$HOME/.colima/default/docker.sock"
 
+# XDG_RUNTIME_DIR: macOS doesn't set this, so nvim falls back to a long path
+# under $TMPDIR (nvim.<username>/<random>/...). Combined with this user's long
+# username, that overflows macOS's 104-byte sockaddr_un limit and breaks
+# things that create Unix sockets there, e.g. fzf-lua's RPC server
+# ("serverstart(): invalid argument"). Point it at a short path instead.
+export XDG_RUNTIME_DIR="/tmp/xdg-runtime-$UID"
+mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
+
 # ------------------------------------------------------------------------------
 # 2) Anthropic API key (lazy — only loaded when needed)
 # ------------------------------------------------------------------------------
@@ -34,6 +42,19 @@ anthropic_api_key() {
     export ANTHROPIC_API_KEY="$(security find-generic-password -a "$USER" -s "anthropic_api_key" -w 2>/dev/null)"
   fi
 }
+motion_api_key() {
+  if [[ -z "$MOTION_API_KEY" ]]; then
+    export MOTION_API_KEY="$(security find-generic-password -a "$USER" -s "motion_api_key" -w 2>/dev/null)"
+  fi
+}
+# Google Ads MCP: developer token from keychain (secret), project id in the clear.
+google_ads_dev_token() {
+  if [[ -z "$GOOGLE_ADS_DEVELOPER_TOKEN" ]]; then
+    export GOOGLE_ADS_DEVELOPER_TOKEN="$(security find-generic-password -a "$USER" -s "google_ads_dev_token" -w 2>/dev/null)"
+  fi
+}
+google_ads_dev_token
+export GOOGLE_PROJECT_ID="stemne"
 # Hook: load the key before any command that might need it
 _maybe_load_api_key() {
   case "$1" in
@@ -42,6 +63,9 @@ _maybe_load_api_key() {
 }
 autoload -Uz add-zsh-hook
 add-zsh-hook preexec _maybe_load_api_key
+
+# Motion key: loaded eagerly at shell startup (always present in the env)
+motion_api_key
 
 # ------------------------------------------------------------------------------
 # 3) Oh My Zsh
@@ -92,6 +116,11 @@ npm()  { __init_nvm; npm "$@"; }
 npx()  { __init_nvm; npx "$@"; }
 pnpm() { __init_nvm; pnpm "$@"; }
 
+# pnpm global bin dir (pnpm installed via Homebrew, not the standalone
+# installer, so `pnpm setup` doesn't work — set this manually instead)
+export PNPM_HOME="$HOME/Library/pnpm"
+export PATH="$PNPM_HOME/bin:$PATH"
+
 # ------------------------------------------------------------------------------
 # 6) fzf, zoxide, broot
 # ------------------------------------------------------------------------------
@@ -119,8 +148,10 @@ setopt SHARE_HISTORY
 # 8) Shell behavior
 # ------------------------------------------------------------------------------
 setopt AUTO_CD
-setopt CORRECT
 setopt CDABLE_VARS
+# INFO: `setopt CORRECT` removed — it silently replaces typed commands with
+# zsh's suggested correction when you answer "y", deleting the original from
+# history and making it impossible to ↑-edit a failing typo.
 
 # ------------------------------------------------------------------------------
 # 9) Completion tweaks
@@ -146,7 +177,12 @@ zle -N _accept_or_complete
 bindkey '\t' _accept_or_complete
 
 # ------------------------------------------------------------------------------
-# 11) Aliases
+# 11) Atuin (Ctrl+R session-scoped; ↑ host-scoped — see ~/.config/atuin/config.toml)
+# ------------------------------------------------------------------------------
+command -v atuin >/dev/null 2>&1 && eval "$(atuin init zsh)"
+
+# ------------------------------------------------------------------------------
+# 12) Aliases
 # ------------------------------------------------------------------------------
 # Git
 alias gst='git status'
@@ -175,7 +211,7 @@ alias restart-wm="$HOME/restart-wm.sh"
 alias timeout="gtimeout"
 
 # ------------------------------------------------------------------------------
-# 12) Functions
+# 13) Functions
 # ------------------------------------------------------------------------------
 # Quick extract
 extract() {
@@ -203,7 +239,7 @@ extract() {
 dc() { devcontainer "$@" --workspace-folder "${PWD}"; }
 
 # ------------------------------------------------------------------------------
-# 13) Auto-track dotfiles (yadm) — runs in background, non-blocking
+# 14) Auto-track dotfiles (yadm) — runs in background, non-blocking
 # ------------------------------------------------------------------------------
 _auto_track_dotfiles() {
   if [[ -d "$HOME/.local/share/yadm/repo.git" ]]; then
@@ -220,8 +256,9 @@ _auto_track_dotfiles() {
 [[ $- == *i* ]] && _auto_track_dotfiles &!
 
 # ------------------------------------------------------------------------------
-# 14) Profiling output (uncomment if zprof is enabled above)
+# 15) Profiling output (uncomment if zprof is enabled above)
 # ------------------------------------------------------------------------------
 # zprof
 
 source /Users/hans-kristian.norum/.config/broot/launcher/bash/br
+

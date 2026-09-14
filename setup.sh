@@ -48,20 +48,17 @@ fi
 # ── Services & Login Items ─────────────────────────────────────────────
 echo "Starting services..."
 
-# yabai / skhd via LaunchAgents (idempotent)
-if ! launchctl list 2>/dev/null | grep -q "com.koekeishiya.yabai"; then
-  yabai --start-service
-fi
-if ! launchctl list 2>/dev/null | grep -q "com.koekeishiya.skhd"; then
-  skhd --start-service
-fi
-
-# Raycast as login item (idempotent)
-if [ -d "/Applications/Raycast.app" ]; then
-  if ! osascript -e 'tell application "System Events" to get the name of every login item' 2>/dev/null | grep -q "Raycast"; then
-    osascript -e 'tell application "System Events" to make login item at end with properties {path:"/Applications/Raycast.app", hidden:false}'
+# App watchdogs via launchd
+for watchdog in raycast paste secure-input; do
+  PLIST_SRC="$DOTFILES/launchd/com.user.${watchdog}-watchdog.plist"
+  PLIST_DEST="$HOME/Library/LaunchAgents/com.user.${watchdog}-watchdog.plist"
+  if [ ! -f "$PLIST_DEST" ] || ! cmp -s "$PLIST_SRC" "$PLIST_DEST"; then
+    cp "$PLIST_SRC" "$PLIST_DEST"
+    launchctl unload "$PLIST_DEST" 2>/dev/null || true
+    launchctl load "$PLIST_DEST"
+    echo "${watchdog} watchdog loaded"
   fi
-fi
+done
 
 # ── Summary ───────────────────────────────────────────────────────────
 echo ""
@@ -71,4 +68,4 @@ echo "  Oh My Tmux:        ~/.tmux"
 echo "  Symlinks:          created by link.sh"
 echo "  Neovim plugins:    synced via Lazy"
 echo "  Default shell:     zsh"
-echo "  Services:          yabai, skhd, Raycast"
+echo "  Services:          Raycast"

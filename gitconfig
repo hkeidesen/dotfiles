@@ -38,3 +38,11 @@
   ds = difftool --tool=vimdiff
 [credential]
 	helper = osxkeychain
+[credential "https://github.com"]
+	helper = 
+	helper = !/opt/homebrew/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !/opt/homebrew/bin/gh auth git-credential
+[url "git@github-sopra:Trondheim-kommune-tip/"]
+	insteadOf = https://github.com/Trondheim-kommune-tip/

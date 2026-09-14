@@ -122,12 +122,12 @@ vim.keymap.set(
   { noremap = true, silent = true, desc = "Will put the path of the buffer to the clipboard" }
 )
 
--- Open TODO in telescope
+-- Open TODOs in fzf-lua
 vim.keymap.set(
   "n",
   "<leader>td",
-  "<cmd>TodoTelescope<CR>",
-  { noremap = true, silent = true, desc = "Open TODOs in telescope" }
+  "<cmd>TodoFzfLua<CR>",
+  { noremap = true, silent = true, desc = "Open TODOs in fzf-lua" }
 )
 
 -- Open TODOs in QuickFix list
@@ -150,6 +150,19 @@ vim.keymap.set("n", "<leader>tn", function()
     ibl.setup({ indent = { char = current_enabled and "" or "▏" } })
   end
 end, { desc = "Toggle number/relativenumber and indent guides" })
+
+vim.keymap.set("n", "<leader>tx", function()
+  local line = vim.api.nvim_get_current_line()
+  local new
+  if line:match("%[ %]") then
+    new = line:gsub("%[ %]", "[x]", 1)
+  elseif line:match("%[[xX]%]") then
+    new = line:gsub("%[[xX]%]", "[ ]", 1)
+  end
+  if new then
+    vim.api.nvim_set_current_line(new)
+  end
+end, { desc = "Toggle markdown checkbox on current line" })
 
 -- Center screen on C-d and C-u
 vim.keymap.set("n", "<C-d>", "<C-d>zz")
@@ -203,6 +216,9 @@ vim.keymap.set("n", "vae", "ggVG", { noremap = true, silent = true, desc = "Sele
 vim.keymap.set("n", "<C-q>", vim.diagnostic.setloclist, { desc = "Open diagnostic [Q]uickfix list" })
 
 -- Opening new terminals
+-- INFO: cursorline + floating-window redraws are the main source of input lag in
+-- snacks terminal — the shell echo moves the cursor on every keystroke, which
+-- forces a full line re-highlight on a transparent float. Kill it locally.
 vim.api.nvim_create_autocmd("TermOpen", {
   group = vim.api.nvim_create_augroup("custom-term-open", { clear = true }),
   callback = function()
@@ -210,6 +226,11 @@ vim.api.nvim_create_autocmd("TermOpen", {
     vim.opt_local.relativenumber = false
     vim.opt_local.scrolloff = 0
     vim.opt_local.signcolumn = "no"
+    vim.opt_local.cursorline = false
+    vim.opt_local.foldcolumn = "0"
+    vim.opt_local.statuscolumn = ""
+    vim.opt_local.spell = false
+    vim.opt_local.list = false
   end,
 })
 
@@ -368,20 +389,6 @@ require("lazy").setup({
     },
   },
   {
-    "declancm/maximize.nvim",
-    opts = {},
-    keys = {
-      {
-        "<leader>z",
-        function()
-          require("maximize").toggle()
-        end,
-        mode = { "n" },
-        desc = "Maximize current window",
-      },
-    },
-  },
-  {
     "folke/lazydev.nvim",
     ft = "lua",
     opts = {
@@ -396,6 +403,12 @@ require("lazy").setup({
     config = function()
       require("treesitter-context").setup({
         max_lines = 2,
+        -- INFO: treesitter-context hooks CursorMoved globally — skip terminal
+        -- and markdown buffers to keep terminal-mode input snappy.
+        disable = function(lang, bufnr)
+          if vim.bo[bufnr].buftype == "terminal" then return true end
+          return lang == "markdown"
+        end,
       })
     end,
   },
@@ -415,56 +428,40 @@ require("lazy").setup({
   },
   {
     "nvim-treesitter/nvim-treesitter",
+    branch = "main",
     build = ":TSUpdate",
-    main = "nvim-treesitter.configs",
-    opts = {
-      ensure_installed = {
-        "bash",
-        "diff",
-        "go",
-        "html",
-        "json",
-        "lua",
-        "luadoc",
-        "markdown",
-        "markdown_inline",
-        "python",
-        "query",
-        "scss",
-        "typescript",
-        "vim",
-        "vimdoc",
-        "vue",
-      },
-      auto_install = true,
-      highlight = {
-        enable = true,
-        disable = function(_, bufnr)
-          return vim.bo[bufnr].buftype == "terminal"
+    config = function()
+      -- The new main branch is parser-only; highlighting and indent must be enabled manually.
+      vim.api.nvim_create_autocmd("FileType", {
+        callback = function(ev)
+          if vim.bo[ev.buf].buftype == "terminal" then return end
+          if pcall(vim.treesitter.start, ev.buf) then
+            vim.bo[ev.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+          end
         end,
-      },
-      indent = { enable = true },
-      textobjects = {
-        select = {
-          enable = true,
-          lookahead = true,
-          keymaps = {
-
-            -- select functions
-            ["af"] = "@function.outer",
-            ["if"] = "@function.inner",
-
-            -- select classes
-            ["ac"] = "@class.outer",
-            ["ic"] = "@class.inner",
-          },
-        },
-      },
-    },
+      })
+      -- install core parsers on startup (no-ops for already-installed ones)
+      require("nvim-treesitter").install({
+        "bash", "c_sharp", "diff", "go", "html", "json", "lua", "luadoc",
+        "markdown", "markdown_inline", "python", "query",
+        "scss", "typescript", "vim", "vimdoc", "vue", "yaml",
+      })
+    end,
   },
   {
     "nvim-treesitter/nvim-treesitter-textobjects",
+    branch = "main",
     dependencies = { "nvim-treesitter" },
+    config = function()
+      require("nvim-treesitter-textobjects").setup({
+        select = { lookahead = true },
+      })
+      local select = require("nvim-treesitter-textobjects.select")
+      vim.keymap.set({ "x", "o" }, "af", function() select.select_textobject("@function.outer", "textobjects") end)
+      vim.keymap.set({ "x", "o" }, "if", function() select.select_textobject("@function.inner", "textobjects") end)
+      vim.keymap.set({ "x", "o" }, "ac", function() select.select_textobject("@class.outer", "textobjects") end)
+      vim.keymap.set({ "x", "o" }, "ic", function() select.select_textobject("@class.inner", "textobjects") end)
+    end,
   },
 }, {
   ui = {

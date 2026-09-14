@@ -1,3 +1,17 @@
+-- Zoom the current window into its own tab instead of Snacks.zen's floating
+-- copy: a real window on the same buffer, so LSP/diagnostics/signcolumn work
+-- exactly as normal, there's no cursor-sync-to-parent needed, and every other
+-- window (including the Claude terminal split) is untouched -- no more
+-- reaching into claudecode.nvim's terminal state at all.
+local function toggle_zoom()
+  if vim.t.zoomed then
+    vim.cmd("tabclose")
+  else
+    vim.cmd("tab split")
+    vim.t.zoomed = true
+  end
+end
+
 return {
   "folke/snacks.nvim",
   priority = 1000,
@@ -5,31 +19,10 @@ return {
   opts = {
     bigfile = { enabled = true },
     notifier = { enabled = true, timeout = 3000 },
-    dashboard = {
-      enabled = true,
-      preset = {
-        keys = {
-          { icon = " ", key = "f", desc = "Find File", action = function() require("oil").open_float() end },
-          { icon = " ", key = "n", desc = "New File", action = ":ene | startinsert" },
-          { icon = " ", key = "g", desc = "Find Text", action = ":lua Snacks.dashboard.pick('live_grep')" },
-          { icon = " ", key = "r", desc = "Recent Files", action = ":lua Snacks.dashboard.pick('oldfiles')" },
-          { icon = " ", key = "c", desc = "Config", action = ":lua Snacks.dashboard.pick('files', {cwd = vim.fn.stdpath('config')})" },
-          { icon = " ", key = "s", desc = "Restore Session", section = "session" },
-          { icon = "󰒲 ", key = "L", desc = "Lazy", action = ":Lazy", enabled = package.loaded.lazy ~= nil },
-          { icon = " ", key = "q", desc = "Quit", action = ":qa" },
-        },
-      },
-      sections = {
-        { section = "header" },
-        { section = "keys", gap = 1, padding = 1 },
-        { section = "recent_files", limit = 8, padding = 1 },
-        { section = "startup" },
-      },
-    },
+    dashboard = { enabled = false },
     input = { enabled = true },
     terminal = { enabled = true, win = { style = "terminal", position = "float", bo = { bufhidden = "hide" } } },
     words = { enabled = true },
-    zen = { enabled = true },
     scratch = { enabled = true },
     lazygit = { enabled = true },
     gitbrowse = { enabled = true },
@@ -44,7 +37,7 @@ return {
     { "<leader>tt", function() Snacks.terminal.toggle() end, mode = { "n", "t" }, desc = "Toggle Terminal" },
     { "<leader>lg", function() Snacks.lazygit() end, desc = "Lazygit" },
     { "<leader>gB", function() Snacks.gitbrowse() end, desc = "Git Browse", mode = { "n", "v" } },
-    { "<leader>zz", function() Snacks.zen() end, desc = "Zen Mode" },
+    { "<leader>z", toggle_zoom, desc = "Zoom Window" },
     { "<leader>.", function() Snacks.scratch() end, desc = "Scratch Buffer" },
     { "<leader>bd", function() Snacks.bufdelete() end, desc = "Delete Buffer" },
     { "]w", function() Snacks.words.jump(1, true) end, desc = "Next Word Reference" },

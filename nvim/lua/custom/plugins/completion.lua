@@ -4,9 +4,12 @@ return {
     version = "1.*",
     dependencies = {
       "rafamadriz/friendly-snippets",
-      "milanglacier/minuet-ai.nvim",
+      -- "milanglacier/minuet-ai.nvim",
     },
     opts = {
+      enabled = function()
+        return vim.bo.buftype ~= "terminal"
+      end,
       keymap = {
         preset = "default",
       },
@@ -77,66 +80,41 @@ return {
         },
       },
       sources = {
-        default = { "lsp", "minuet", "path", "buffer", "snippets" },
+        default = { "lsp", "path", "buffer", "snippets" },
         providers = {
-          minuet = {
-            name = "minuet",
-            module = "minuet.blink",
-            async = true,
-            timeout_ms = 5000,
-            score_offset = 100,
-          },
+          -- minuet = {
+          --   name = "minuet",
+          --   module = "minuet.blink",
+          --   async = true,
+          --   timeout_ms = 5000,
+          --   score_offset = 100,
+          -- },
         },
       },
       fuzzy = { implementation = "prefer_rust_with_warning" },
       cmdline = {
         enabled = true,
-        keymap = { preset = "cmdline" },
+        keymap = {
+          preset = "cmdline",
+          -- cmdline preset's Tab is `show_and_insert_or_accept_single` then
+          -- `select_next`, which skips past the preselected item when multiple
+          -- matches exist. Prefer accepting the current selection first so
+          -- Tab inserts the highlighted item (e.g. :L<Tab> -> :Lazy).
+          ["<Tab>"] = { "select_and_accept", "select_next", "fallback" },
+          ["<S-Tab>"] = { "select_prev", "fallback" },
+        },
         sources = { "cmdline", "path", "buffer" },
         completion = {
           menu = { auto_show = true },
-        },
-      },
-    },
-  },
-  {
-    "milanglacier/minuet-ai.nvim",
-    lazy = false,
-    dependencies = {
-      "nvim-lua/plenary.nvim",
-    },
-    opts = {
-      provider = "openai_fim_compatible",
-      n_completions = 3,
-      context_window = 16384,
-      throttle = 200,
-      debounce = 100,
-      request_timeout = 8,
-      notify = "error",
-      provider_options = {
-        openai_fim_compatible = {
-          api_key = "TERM", -- Placeholder for Ollama (any env var works)
-          name = "Ollama",
-          end_point = "http://localhost:11434/v1/completions",
-          model = "qwen2.5-coder:14b",
-          optional = {
-            max_tokens = 512,
-            top_p = 0.9,
-            temperature = 0.15,
-            stop = { "\n\n", "\n```", "```" },
-            num_predict = 512,
+          list = {
+            selection = {
+              -- Highlighted first match is treated as selected, so <CR> accepts
+              -- it instead of executing the raw typed text, and <Tab> inserts
+              -- the currently highlighted item rather than skipping to the next.
+              preselect = true,
+              auto_insert = true,
+            },
           },
-        },
-      },
-      virtualtext = {
-        auto_trigger_ft = { "python", "javascript", "typescript", "lua", "go", "rust", "cpp", "c" },
-        keymap = {
-          accept = "<Tab>",
-          accept_line = "<C-l>",
-          accept_n_lines = "<A-z>",
-          next = "<A-]>",
-          prev = "<A-[>",
-          dismiss = "<C-e>",
         },
       },
     },

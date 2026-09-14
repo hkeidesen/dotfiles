@@ -1,77 +1,136 @@
 #!/usr/bin/env sh
-
-# -------------
-# Core layout
-# -------------
 yabai -m config layout bsp
 yabai -m config insert_feedback_color 0x00000000
 yabai -m config window_placement second_child
 yabai -m config auto_balance off
 yabai -m config split_ratio 0.60
-
-# -------------
-# Edges vs gaps
-#   - No padding to screen edges
-#   - Keep space between windows
-# -------------
 yabai -m config top_padding 0
 yabai -m config bottom_padding 0
 yabai -m config left_padding 0
 yabai -m config right_padding 0
 yabai -m config window_gap 12
-
-# If you run a top bar (e.g., SketchyBar), uncomment:
-# yabai -m config top_padding 36
-
-# -------------
-# Mouse controls
-# -------------
-yabai -m config mouse_drop_action swap
+yabai -m config mouse_drop_action stack
 yabai -m config mouse_modifier fn
 yabai -m config mouse_action1 move
 yabai -m config mouse_action2 resize
 
-# -------------
-# Focus behavior (optional – comment out if you don't like it)
-# -------------
-# yabai -m config focus_follows_mouse autoraise
-
-# -------------
-# Common rules (float/unmanage some apps)
-# -------------
-for app in "System Settings" "Finder" "Preview" "Music" "1Password" "Messages" "Session" "Raycast" "Google Chrome for Testing"; do
+for app in \
+  "System Settings" "Finder" "Preview" "Music" "1Password" "Messages" "Session" "Raycast" \
+  "Google Chrome for Testing" \
+  "Karabiner-Elements" "Karabiner-EventViewer" "Karabiner-NotificationWindow" \
+  "zoom.us" "FaceTime" "Photos" "Calendar" "Calculator" "QuickTime Player" \
+  "Activity Monitor" "Disk Utility" "Console" "Archive Utility" "Installer" \
+  "Software Update" "Migration Assistant" "Tailscale"; do
   yabai -m rule --add app="^$app$" manage=off
 done
-
-# Float generic dialogs / preferences windows
 yabai -m rule --add role="AXDialog" manage=off
 yabai -m rule --add title="Preferences" manage=off
+yabai -m rule --add app="^Music$" manage=off
 
-# Example: make Messages sticky across spaces (optional)
-# yabai -m rule --add app="^Messages$" sticky=on manage=off
-
-# -------------
-# QoL signals
-# -------------
-# Center newly created floating windows (e.g., dialogs, unmanaged apps)
 yabai -m signal --add event=window_created action='
   if [ "$(yabai -m query --windows --window | jq ".floating")" -eq 1 ]; then
     yabai -m window --grid 4:4:1:1:2:2
   fi
 '
-
-# Clear any stuck insert feedback indicator
 yabai -m signal --add event=window_focused action='yabai -m window --insert cancel 2>/dev/null'
 
+# Auto-stack new Dia windows onto an existing Dia window on the same space.
+# No app= filter on the signal: yabai dispatches window_created before the
+# window`s app/title metadata is populated, so a filter at the event level
+# silently drops the event. We poll inside the action instead — that gives
+# yabai`s state time to settle, then we check the app ourselves.
+#
+# Guards: the new window and the target must both have an AX reference, be
+# managed (is-floating false), and not native-fullscreen. has-ax-reference
+# is THE critical gate — without it yabai may list a window in queries but
+# fail every command with "could not locate the window to act on" (zombie
+# windows whose AX reference died but yabai`s tracker hasn`t cleaned up).
+yabai -m signal --add event=window_created action='
+  new_id=$YABAI_WINDOW_ID
+  log=/tmp/yabai-dia-stack.log
+  app=""
+  ax="false"
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    w=$(yabai -m query --windows --window "$new_id" 2>/dev/null)
+    app=$(echo "$w" | jq -r ".app // empty")
+    ax=$(echo "$w" | jq -r ".[\"has-ax-reference\"] // false")
+    [ "$app" = "Dia" ] && [ "$ax" = "true" ] && break
+    [ -n "$app" ] && [ "$app" != "Dia" ] && exit 0
+    sleep 0.1
+  done
+  [ "$app" != "Dia" ] || [ "$ax" != "true" ] && exit 0
+  ok=$(echo "$w" | jq -r "(.[\"is-floating\"]|not) and (.[\"is-native-fullscreen\"]|not)")
+  [ "$ok" != "true" ] && exit 0
+  {
+    echo "--- $(date "+%H:%M:%S") new_id=$new_id app=$app (settled in $i attempts) ---"
+    target=$(yabai -m query --windows --space \
+      | jq "[.[] | select(.app==\"Dia\" and .id != $new_id and .[\"has-ax-reference\"] and (.[\"is-floating\"]|not) and (.[\"is-native-fullscreen\"]|not))] | sort_by(.id) | .[0].id // empty")
+    if [ -n "$target" ]; then
+      echo "stacking $new_id onto $target"
+      yabai -m window "$new_id" --stack "$target" 2>&1 || echo "stack cmd failed: exit $?"
+    else
+      echo "no stackable Dia target on space"
+    fi
+  } >> "$log" 2>&1
+'
 
-# -------------
-# Per-space examples (optional)
-# -------------
-# Make Space 1 tiled and Space 2 floating:
-# yabai -m space 1 --layout bsp
-# yabai -m space 2 --layout float
+# Reconciliation: every time Dia is activated, sweep any unstacked Dia windows
+# on the current space onto the first one. window_created is best-effort
+# (metadata races, dropped signals); this gives us a guaranteed retry on every
+# Dia focus, so a missed stack self-heals the next time you touch the app.
+#
+# Predicate notes (every gate here is here for a reason found in the log):
+# - has-ax-reference: filters out zombie windows yabai still tracks but can
+#   no longer reach via accessibility API ("could not locate the window to
+#   act on"), AND filters out tooltip-class entries (e.g. AXHelpTag).
+# - stack-index > 0: the only reliable signal for "actually in a stack node".
+#   Frame equality alone catches manage=off windows (Music, 1Password) and
+#   incidentally-fullscreen apps (Slack, WezTerm) that share the Dia frame
+#   without being in the stack.
+# - native-fullscreen bail: cmd+tab into fullscreen Dia fires this handler,
+#   and acting on the post-switch current space misidentifies things.
+yabai -m signal --add event=application_activated app="^Dia$" action='
+  log=/tmp/yabai-dia-stack.log
+  space_windows=$(yabai -m query --windows --space)
 
-# -------------
-# Helper: reload on change (uncomment if you edit frequently and use launchd)
-# -------------
-# launchctl stop org.yabai.yabai; launchctl start org.yabai.yabai
+  any_fs=$(echo "$space_windows" \
+    | jq "any(.app==\"Dia\" and .[\"is-native-fullscreen\"])")
+  [ "$any_fs" = "true" ] && exit 0
+
+  # Eject foreigners only from a REAL Dia stack node. Both windows must have
+  # an AX reference and stack-index > 0; same frame + same display then
+  # identifies that they share that stack node.
+  dia_stack_frames=$(echo "$space_windows" \
+    | jq -c "[.[] | select(.app==\"Dia\" and .[\"has-ax-reference\"] and .[\"stack-index\"] > 0) | {frame, display}]")
+  has_stack=$(echo "$dia_stack_frames" | jq "length > 0")
+  if [ "$has_stack" = "true" ]; then
+    foreign_ids=$(echo "$space_windows" | jq -r --argjson anchors "$dia_stack_frames" "
+      .[] | select(.app != \"Dia\")
+          | select(.[\"has-ax-reference\"] and .[\"stack-index\"] > 0)
+          | . as \$w
+          | select(\$anchors | any(.frame == \$w.frame and .display == \$w.display))
+          | .id
+    ")
+    for wid in $foreign_ids; do
+      fapp=$(echo "$space_windows" | jq -r ".[] | select(.id==$wid) | .app")
+      echo "$(date "+%H:%M:%S") ejecting foreign window $wid ($fapp) from Dia stack" >> "$log"
+      yabai -m window "$wid" --toggle float 2>>"$log"
+      yabai -m window "$wid" --toggle float 2>>"$log"
+    done
+  fi
+
+  # Re-stack stray Dia windows. has-ax-reference excludes zombies + tooltips.
+  dia=$(echo "$space_windows" \
+    | jq "[.[] | select(.app==\"Dia\" and .[\"has-ax-reference\"] and (.[\"is-floating\"]|not) and (.[\"is-native-fullscreen\"]|not) and (.[\"has-fullscreen-zoom\"]|not))] | sort_by(.id)")
+  count=$(echo "$dia" | jq "length")
+  [ "$count" -lt 2 ] && exit 0
+
+  # Prefer an existing stack as anchor; fall back to lowest id.
+  anchor=$(echo "$dia" | jq "[.[] | select(.[\"stack-index\"] > 0)] | .[0].id // empty")
+  [ -z "$anchor" ] && anchor=$(echo "$dia" | jq ".[0].id")
+
+  echo "$dia" | jq -r ".[] | select(.id != $anchor and .[\"stack-index\"]==0) | .id" | while read -r wid; do
+    echo "$(date "+%H:%M:%S") reconcile: stacking $wid onto $anchor" >> "$log"
+    yabai -m window "$wid" --stack "$anchor" 2>>"$log"
+  done
+'

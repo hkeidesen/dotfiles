@@ -12,9 +12,9 @@ config.font = wezterm.font_with_fallback({
 config.color_scheme = "Ayu Mirage"
 -- config.color_scheme = "rose-pine"
 -- config.color_scheme = 'Horizon Dark (base16)'
-config.font_size = 13.0
-config.cell_width = 1.5
-config.line_height = 1.75
+config.font_size = 14.0
+config.line_height = 1.5
+config.cell_width = 1.2
 config.window_background_opacity = 0.85
 config.macos_window_background_blur = 20
 
@@ -34,13 +34,8 @@ config.scrollback_lines = 10000
 config.send_composed_key_when_left_alt_is_pressed = true -- typing: { } [ ] | etc.
 config.send_composed_key_when_right_alt_is_pressed = false -- sends Meta for tmux (M-a, M-b…)
 
--- Right-opt+hjkl (remapped to F13-F16 by Karabiner) → Meta-hjkl for tmux pane nav
-local act = wezterm.action
-config.keys = {
-  { key = "F13", action = act.SendString("\x1bh") },
-  { key = "F14", action = act.SendString("\x1bj") },
-  { key = "F15", action = act.SendString("\x1bk") },
-  { key = "F16", action = act.SendString("\x1bl") },
-}
+-- Password-input detection flips on macOS Secure Keyboard Entry, which blocks skhd
+-- system-wide and gets stuck on if a pane is left in an echo-off state (dead sudo/ssh prompt).
+config.detect_password_input = false
 
 return config

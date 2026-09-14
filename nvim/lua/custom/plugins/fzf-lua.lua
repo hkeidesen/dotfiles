@@ -1,3 +1,13 @@
+-- Per-picker history: persists queries to a file and binds up/ctrl-u to
+-- prev-history, down/ctrl-d to next-history. Merge into a picker's fzf_opts
+-- (or pass as opts.fzf_opts at the call site) to opt in.
+local function with_history(name)
+  return {
+    ["--history"] = vim.fn.stdpath("data") .. "/fzf-lua-" .. name .. "-history",
+    ["--bind"] = "up:prev-history,ctrl-u:prev-history,down:next-history,ctrl-d:next-history",
+  }
+end
+
 return {
   {
     "ibhagwan/fzf-lua",
@@ -45,6 +55,13 @@ return {
         )
       end
 
+      -- List form (no shell expansion) — used by the BufWritePost re-grep.
+      local RG_OPTS_LIST = { "--hidden", "--follow", "--no-heading", "--line-number", "--column", "--smart-case", "--trim" }
+      for _, e in ipairs(EXCLUDES) do
+        table.insert(RG_OPTS_LIST, "--glob=!**/" .. e .. "/**")
+      end
+
+      -- String form — kept for fzf-lua, which builds shell commands.
       local RG_OPTS = table.concat({
         "--hidden",
         "--follow",
@@ -65,12 +82,163 @@ return {
       config.defaults.keymap.builtin["<c-f>"] = "preview-page-down"
       config.defaults.keymap.builtin["<c-b>"] = "preview-page-up"
 
+      -- Last grep pattern + cwd, captured when results are sent to qflist.
+      -- BufWritePost autocmd below re-greps with these to keep Trouble's
+      -- qflist view in sync with the buffers it points at.
+      -- last_grep_entries is the qflist snapshot at Ctrl-Q time — re-greps
+      -- reconcile against it so entries persist (as stale) even if edits
+      -- remove the original match.
+      local last_grep_pattern = nil
+      local last_grep_cwd = nil
+      local last_grep_entries = nil
+
+      -- Default file-open: open the file, then re-assert the matched
+      -- line/col and `zvzz` to open folds + recenter. Re-asserting on the
+      -- next tick beats any BufReadPost handler (e.g. our restore-last-
+      -- cursor-position autocmd) that fires during buffer load and would
+      -- otherwise leave the cursor on the previous edit mark instead of
+      -- the grep match.
+      local fzf_path = require("fzf-lua.path")
+      config.defaults.actions.files["default"] = function(selected, opts)
+        actions.file_edit_or_qf(selected, opts)
+        vim.schedule(function()
+          if #selected == 1 then
+            local entry = fzf_path.entry_to_file(selected[1], opts)
+            if entry and entry.line and entry.line > 0 then
+              pcall(vim.api.nvim_win_set_cursor, 0,
+                { entry.line, math.max(0, (entry.col or 1) - 1) })
+            end
+          end
+          vim.cmd("silent! normal! zvzz")
+        end)
+      end
+
       -- Quickfix action - send to quickfix then open Trouble's qflist view
       config.defaults.actions.files["ctrl-q"] = function(selected, opts)
         actions.file_sel_to_qf(selected, opts)
         vim.cmd("cclose")
+        -- Live pickers expose `fn_reload`; for those the rg pattern is what
+        -- the user typed (last_query). For non-live `grep`, the rg pattern
+        -- is the seed (`search`) — last_query would be the fzf-side filter
+        -- layered on top, which isn't a valid rg regex.
+        if opts.fn_reload then
+          last_grep_pattern = opts.last_query
+        else
+          last_grep_pattern = opts.search
+        end
+        last_grep_cwd = opts.cwd
+        last_grep_entries = vim.fn.getqflist()
         vim.cmd("Trouble qflist open")
       end
+
+      -- Re-run last grep on save so qflist line numbers / hits stay current.
+      -- Scoped to "only when Trouble qflist is actually open" to avoid
+      -- shelling out to rg on every unrelated save.
+      vim.api.nvim_create_autocmd("BufWritePost", {
+        group = vim.api.nvim_create_augroup("FzfRegrepOnSave", { clear = true }),
+        callback = function()
+          if not last_grep_pattern or last_grep_pattern == "" then return end
+
+          local ok, trouble = pcall(require, "trouble")
+          if not ok then return end
+          -- Trouble v3 API; bail quietly if it changes.
+          local open = pcall(function() return trouble.is_open({ mode = "qflist" }) end)
+          if not open then return end
+
+          -- Build args as a list so systemlist() skips the shell — otherwise
+          -- zsh's `nomatch` (and `!` history expansion) trip on the rg globs.
+          local args = { "rg", "--vimgrep" }
+          vim.list_extend(args, RG_OPTS_LIST)
+          table.insert(args, "--")
+          table.insert(args, last_grep_pattern)
+
+          local prev_cwd
+          if last_grep_cwd and last_grep_cwd ~= "" then
+            prev_cwd = vim.fn.getcwd()
+            vim.cmd("lcd " .. vim.fn.fnameescape(last_grep_cwd))
+          end
+          local lines = vim.fn.systemlist(args)
+          if prev_cwd then vim.cmd("lcd " .. vim.fn.fnameescape(prev_cwd)) end
+
+          -- rg exits 1 when there are zero matches — that's a valid outcome,
+          -- not an error. Only bail on actual failures (exit >= 2).
+          if vim.v.shell_error >= 2 then return end
+
+          -- No snapshot (qflist came from somewhere other than our Ctrl-Q
+          -- action) — fall back to plain replace.
+          if not last_grep_entries or #last_grep_entries == 0 then
+            vim.fn.setqflist({}, "r", { lines = lines, title = "rg: " .. last_grep_pattern })
+            pcall(function() trouble.refresh({ mode = "qflist" }) end)
+            return
+          end
+
+          -- Reconcile original snapshot against fresh rg matches:
+          --   * (file, trimmed text) still matches → refresh lnum/col/text
+          --   * no match → keep original entry, mark type="W" (stale)
+          --   * fresh matches not in the original set are ignored
+          local base = (last_grep_cwd and last_grep_cwd ~= "") and last_grep_cwd or vim.fn.getcwd()
+          local function to_abs(p)
+            if p:sub(1, 1) == "/" then return p end
+            return vim.fs.normalize(base .. "/" .. p)
+          end
+
+          local fresh_by_file = {}
+          for _, line in ipairs(lines) do
+            local f, l, c, t = line:match("^(.-):(%d+):(%d+):(.*)$")
+            if f then
+              local abs = to_abs(f)
+              fresh_by_file[abs] = fresh_by_file[abs] or {}
+              table.insert(fresh_by_file[abs], {
+                lnum = tonumber(l),
+                col = tonumber(c),
+                text = vim.trim(t),
+              })
+            end
+          end
+
+          local items = {}
+          for _, entry in ipairs(last_grep_entries) do
+            local name = entry.filename
+            if (not name or name == "") and entry.bufnr and entry.bufnr > 0 then
+              name = vim.api.nvim_buf_get_name(entry.bufnr)
+            end
+            if name and name ~= "" then
+              local abs = to_abs(name)
+              local entry_text = vim.trim(entry.text or "")
+              local matched
+              local pool = fresh_by_file[abs]
+              if pool then
+                for i, fresh in ipairs(pool) do
+                  if fresh.text == entry_text then
+                    matched = fresh
+                    table.remove(pool, i)
+                    break
+                  end
+                end
+              end
+              if matched then
+                table.insert(items, {
+                  filename = abs,
+                  lnum = matched.lnum,
+                  col = matched.col,
+                  text = matched.text,
+                })
+              else
+                table.insert(items, {
+                  filename = abs,
+                  lnum = entry.lnum,
+                  col = entry.col,
+                  text = entry.text,
+                  type = "W",
+                })
+              end
+            end
+          end
+
+          vim.fn.setqflist({}, "r", { items = items, title = "rg: " .. last_grep_pattern })
+          pcall(function() trouble.refresh({ mode = "qflist" }) end)
+        end,
+      })
 
       return {
         fzf_colors = true,
@@ -92,9 +260,7 @@ return {
         files = {
           prompt = "Files> ",
           fd_opts = "--color=never --type f --hidden --follow " .. build_fd_excludes(),
-          fzf_opts = {
-            ["--history"] = vim.fn.stdpath("data") .. "/fzf-lua-files-history",
-          },
+          fzf_opts = with_history("files"),
         },
         buffers = { prompt = "Buffers> ", sort_lastused = true },
         oldfiles = { prompt = "Recent> ", include_current_session = true },
@@ -104,9 +270,7 @@ return {
           rg_glob = true,
           glob_flag = "--iglob",
           glob_separator = "%s%-%-",
-          fzf_opts = {
-            ["--history"] = vim.fn.stdpath("data") .. "/fzf-lua-grep-history",
-          },
+          fzf_opts = with_history("grep"),
         },
         grep = {
           prompt = "Grep> ",
@@ -114,9 +278,7 @@ return {
           rg_glob = true,
           glob_flag = "--iglob",
           glob_separator = "%s%-%-",
-          fzf_opts = {
-            ["--history"] = vim.fn.stdpath("data") .. "/fzf-lua-grep-history",
-          },
+          fzf_opts = with_history("grep"),
         },
         lsp = {
           prompt_postfix = "> ",
@@ -125,6 +287,44 @@ return {
             prompt = "Code Actions> ",
             ui_select = true,
             winopts = { relative = "editor", width = 0.5, height = 0.4 },
+          },
+        },
+        git = {
+          status = {
+            fzf_opts = {
+              ["--header"] = "ctrl-s stage | ctrl-u unstage | ctrl-x reset",
+            },
+            actions = {
+              ["default"] = function(selected, opts)
+                actions.file_edit(selected, opts)
+                local bufnr = vim.api.nvim_get_current_buf()
+                local jumped = false
+                local function jump()
+                  if jumped then return end
+                  jumped = true
+                  vim.api.nvim_win_set_cursor(0, { 1, 0 })
+                  require("gitsigns").nav_hunk("next")
+                end
+                -- Fire immediately if gitsigns already has data for this buffer
+                vim.schedule(function()
+                  local ok, cache = pcall(require, "gitsigns.cache")
+                  if ok and cache.cache[bufnr] then
+                    jump()
+                  else
+                    vim.api.nvim_create_autocmd("User", {
+                      pattern = "GitSignsUpdate",
+                      once = true,
+                      callback = jump,
+                    })
+                  end
+                end)
+              end,
+              ["ctrl-s"] = { fn = actions.git_stage, reload = true },
+              ["ctrl-u"] = { fn = actions.git_unstage, reload = true },
+              ["ctrl-x"] = { fn = actions.git_reset, reload = true },
+              ["left"] = false,
+              ["right"] = false,
+            },
           },
         },
       }
@@ -157,7 +357,9 @@ return {
 
       -- LSP (gd/gr are set in lsp.lua, these are extras)
       map("n", "<leader>fs", fzf.lsp_document_symbols, { desc = "Find symbols" })
-      map("n", "<leader>fS", fzf.lsp_live_workspace_symbols, { desc = "Find workspace symbols" })
+      map("n", "<leader>fS", function()
+        fzf.lsp_live_workspace_symbols({ fzf_opts = with_history("lsp-symbols") })
+      end, { desc = "Find workspace symbols" })
       map("n", "<leader>ca", fzf.lsp_code_actions, { desc = "Code actions" })
       map("v", "<leader>ca", fzf.lsp_code_actions, { desc = "Code actions" })
 
@@ -165,7 +367,7 @@ return {
       map("n", "<leader>gs", fzf.git_status, { desc = "Git status" })
       map("n", "<leader>gc", fzf.git_commits, { desc = "Git commits" })
       map("n", "<leader>gb", fzf.git_branches, { desc = "Git branches" })
-      map("n", "<leader>gB", fzf.git_bcommits, { desc = "Git buffer commits" })
+      map("n", "<leader>gh", fzf.git_bcommits, { desc = "Git file history" })
 
       -- Command history
       map("n", "<leader>:", fzf.command_history, { desc = "Command history" })
