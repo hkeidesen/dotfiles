@@ -67,6 +67,8 @@ add-zsh-hook preexec _maybe_load_api_key
 # Motion key: loaded eagerly at shell startup (always present in the env)
 motion_api_key
 
+source "$HOME/dotfiles/scripts/gh-tmux-auth.zsh"
+
 # ------------------------------------------------------------------------------
 # 3) Oh My Zsh
 # ------------------------------------------------------------------------------
