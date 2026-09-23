@@ -1,0 +1,8 @@
+# Included by ~/dotfiles/gitconfig for repos whose origin is in the dfo-no org.
+# Keyed on the same org as _GH_ORG_ACCOUNTS in scripts/gh-auth.zsh, so the
+# commit author and the token can't drift apart.
+#
+# GitHub's noreply address is always attributed to hkeidesen-dfo and leaks no
+# private address. Swap it for a corporate one if the org requires that.
+[user]
+	email = 329439471+hkeidesen-dfo@users.noreply.github.com

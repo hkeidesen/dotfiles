@@ -1,0 +1,8 @@
+# Included by ~/dotfiles/gitconfig for repos whose origin is in the
+# Trondheim-kommune-tip org. Keyed on the same org as _GH_ORG_ACCOUNTS in
+# scripts/gh-auth.zsh, so the commit author and the token can't drift apart.
+#
+# GitHub's noreply address is always attributed to hkeidesen-sopra and leaks no
+# private address. Swap it for a corporate one if the org requires that.
+[user]
+	email = 259579622+hkeidesen-sopra@users.noreply.github.com

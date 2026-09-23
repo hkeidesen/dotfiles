@@ -67,7 +67,7 @@ add-zsh-hook preexec _maybe_load_api_key
 # Motion key: loaded eagerly at shell startup (always present in the env)
 motion_api_key
 
-source "$HOME/dotfiles/scripts/gh-tmux-auth.zsh"
+source "$HOME/dotfiles/scripts/gh-auth.zsh"
 
 # ------------------------------------------------------------------------------
 # 3) Oh My Zsh
@@ -210,6 +210,10 @@ alias ctop='docker run --rm -ti -v /var/run/docker.sock:/var/run/docker.sock qua
 
 # Misc
 alias restart-wm="$HOME/restart-wm.sh"
+
+# Persistent remote shells (attach existing tmux session, else create it)
+alias hl='ssh -t homelab "tmux new -A -s main"'
+
 alias timeout="gtimeout"
 
 # ------------------------------------------------------------------------------

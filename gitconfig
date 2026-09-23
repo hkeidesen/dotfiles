@@ -44,5 +44,28 @@
 [credential "https://gist.github.com"]
 	helper = 
 	helper = !/opt/homebrew/bin/gh auth git-credential
-[url "git@github-sopra:Trondheim-kommune-tip/"]
-	insteadOf = https://github.com/Trondheim-kommune-tip/
+# Route every github.com remote over HTTPS so it goes through the gh credential
+# helper above, which serves whichever account scripts/gh-auth.zsh selected for
+# this shell. One auth path for git and gh, instead of SSH quietly using a
+# single global key regardless of which client's repo you're standing in.
+# The stored URL is untouched (`git config --get remote.origin.url` still shows
+# what was cloned); `git remote -v` and the transport both show the rewrite.
+[url "https://github.com/"]
+	insteadOf = git@github.com:
+	insteadOf = ssh://git@github.com/
+	insteadOf = git@github-sopra:
+
+# Commit identity, keyed on the same orgs as _GH_ORG_ACCOUNTS in
+# scripts/gh-auth.zsh. Two patterns per org on purpose: "**org/**" matches the
+# scp-style form (git@github.com:org/repo — no slash before the org), and
+# "**/org/**" matches https:// and ssh:// (where there is one). A single "**"
+# only crosses "/" when it is a whole path component, so neither pattern covers
+# both forms on its own.
+[includeIf "hasconfig:remote.*.url:**Trondheim-kommune-tip/**"]
+	path = ~/dotfiles/gitconfig-sopra
+[includeIf "hasconfig:remote.*.url:**/Trondheim-kommune-tip/**"]
+	path = ~/dotfiles/gitconfig-sopra
+[includeIf "hasconfig:remote.*.url:**dfo-no/**"]
+	path = ~/dotfiles/gitconfig-dfo
+[includeIf "hasconfig:remote.*.url:**/dfo-no/**"]
+	path = ~/dotfiles/gitconfig-dfo
