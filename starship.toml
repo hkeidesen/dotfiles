@@ -7,6 +7,31 @@ command_timeout = 2000
 scan_timeout = 1000
 right_format = ""                # robbyrussell is left-only
 
+# ----- prompt layout -----
+# This MUST stay above the first [table] header. A bare key written after one
+# belongs to that table, not the root — this line lived below [palettes.melange]
+# and was parsed as palettes.melange.format, so starship ignored it and fell
+# back to its default prompt. Every module configured below was either unused
+# or rendered in an order nobody chose.
+#
+# Only modules listed here render, so a new [module] section needs a line here.
+format = """\
+$directory\
+$git_branch\
+$git_commit\
+$git_status\
+$git_state\
+${env_var.GH_AUTH_USER}\
+$python\
+$nodejs\
+$golang\
+$docker_context\
+$kubernetes\
+$cmd_duration\
+$jobs\
+$line_break\
+$character"""
+
 # --- palette (optional, safe to keep) ---
 palette = "melange"
 [palettes.melange]
@@ -19,9 +44,6 @@ yellow = "#d3c28e"
 red    = "#e68183"
 purple = "#d699b6"
 bg     = "#1e1e1e"
-
-# ----- prompt layout -----
-format = """$directory$git_branch$git_status$git_state$python$nodejs$golang$docker_context$kubernetes$character"""
 
 # ----- directory: show just the current folder -----
 [directory]
@@ -47,16 +69,19 @@ format = "[( $tag )]($style)"
 [git_status]
 style = "fg:red"
 conflicted = "!"
+untracked = "?"
 stashed = "S"
 staged = "+"
 modified = "*"
 renamed = "»"
 deleted = "x"
-ahead = " ⇡${count}"
-behind = " ⇣${count}"
-diverged = " ⇕${ahead_count}/${behind_count}"
+# Divergence from upstream is information, not damage — keep it out of the red
+# that marks a dirty tree, so "⇣7" stops reading like something is wrong.
+ahead = "[ ⇡${count}](fg:muted)"
+behind = "[ ⇣${count}](fg:muted)"
+diverged = "[ ⇕${ahead_count}/${behind_count}](fg:orange)"
 # no brackets, just append marks if present
-format = "[$modified$staged$deleted$conflicted$ahead_behind]($style) "
+format = "[$modified$staged$deleted$conflicted$untracked$stashed$ahead_behind]($style) "
 
 [git_state]
 style = "fg:orange"
@@ -73,7 +98,7 @@ symbol = " "
 style = "fg:yellow"
 detect_extensions = ["py"]
 detect_files = ["pyproject.toml","requirements.txt","Pipfile","manage.py"]
-format = "[$symbol$virtualenv]($style) "
+format = "[$symbol($virtualenv )]($style)"
 
 [nodejs]
 symbol = " "
@@ -89,7 +114,7 @@ format = "[$symbol($version )]($style)"
 [docker_context]
 symbol = " "
 style = "fg:blue"
-only_with_files = false
+only_with_files = true   # otherwise "colima" prints in every directory, everywhere
 format = "[$symbol$context]($style) "
 
 [gcloud]
@@ -114,6 +139,13 @@ error_symbol   = "[✗](fg:yellow) "
 vicmd_symbol   = "[❮](bold fg:orange) "
 format = "$symbol"
 
-# (Extras you had – disabled by default)
-[cmd_duration]  # robbyrussell doesn't show this, enable if you miss it
-min_time = 999999 # effectively off
+# ----- command duration and background jobs -----
+[cmd_duration]
+min_time = 3000
+format = "took [$duration]($style) "
+style = "fg:yellow"
+
+[jobs]
+number_threshold = 1
+format = "[jobs:$number]($style) "
+style = "fg:muted"
