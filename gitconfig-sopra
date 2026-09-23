@@ -2,7 +2,8 @@
 # Trondheim-kommune-tip org. Keyed on the same org as _GH_ORG_ACCOUNTS in
 # scripts/gh-auth.zsh, so the commit author and the token can't drift apart.
 #
-# GitHub's noreply address is always attributed to hkeidesen-sopra and leaks no
-# private address. Swap it for a corporate one if the org requires that.
+# Recovered from this account's own commit history (optimizely-tk, tipverse, and
+# the commits search API agree). Most commits in those repos went out as
+# hkeidesen@proton.me instead — that drift is what these includeIf rules stop.
 [user]
-	email = 259579622+hkeidesen-sopra@users.noreply.github.com
+	email = hans-kristian.norum@soprasteria.com
